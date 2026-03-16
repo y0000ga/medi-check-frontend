@@ -1,0 +1,136 @@
+import dayjs from "dayjs";
+
+import { FrequencyUnit } from "@/types/common";
+import { ScheduleEndType } from "@/types/domain";
+import { IDB_Schedule } from "@/types/db";
+import { ScheduleFormValues } from "@/types/schedule";
+
+export const parseTimeSlots = (value: string) =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+const isWithinEndCondition = (schedule: IDB_Schedule, targetDate: dayjs.Dayjs) => {
+  if (!schedule.endType || schedule.endType === ScheduleEndType.never) {
+    return true;
+  }
+
+  if (schedule.endType === ScheduleEndType.until) {
+    return schedule.untilDate ? !targetDate.isAfter(dayjs(schedule.untilDate), "day") : true;
+  }
+
+  return true;
+};
+
+export const scheduleOccursOnDate = (schedule: IDB_Schedule, targetDate: dayjs.Dayjs) => {
+  const startAt = dayjs(schedule.startAt);
+  const targetDay = targetDate.startOf("day");
+  const startDay = startAt.startOf("day");
+
+  if (targetDay.isBefore(startDay)) {
+    return false;
+  }
+
+  if (!isWithinEndCondition(schedule, targetDay)) {
+    return false;
+  }
+
+  if (!schedule.frequencyUnit) {
+    return targetDay.isSame(startDay, "day");
+  }
+
+  const interval = schedule.interval ?? 1;
+
+  switch (schedule.frequencyUnit) {
+    case FrequencyUnit.Day: {
+      const diffDays = targetDay.diff(startDay, "day");
+      return diffDays % interval === 0;
+    }
+    case FrequencyUnit.Week: {
+      const weekdays = schedule.weekdays && schedule.weekdays.length > 0 ? schedule.weekdays : [startAt.day()];
+      const diffDays = targetDay.diff(startDay, "day");
+      const weekOffset = Math.floor(diffDays / 7);
+
+      return weekdays.includes(targetDay.day()) && weekOffset % interval === 0;
+    }
+    case FrequencyUnit.Month: {
+      const diffMonths = targetDay.startOf("month").diff(startDay.startOf("month"), "month");
+      return targetDay.date() === startAt.date() && diffMonths % interval === 0;
+    }
+    case FrequencyUnit.Year: {
+      const diffYears = targetDay.startOf("year").diff(startDay.startOf("year"), "year");
+      return (
+        targetDay.date() === startAt.date() &&
+        targetDay.month() === startAt.month() &&
+        diffYears % interval === 0
+      );
+    }
+    default:
+      return false;
+  }
+};
+
+const countOccurrencesUntil = (schedule: IDB_Schedule, targetDate: dayjs.Dayjs) => {
+  let count = 0;
+  let cursor = dayjs(schedule.startAt).startOf("day");
+
+  while (cursor.isBefore(targetDate, "day") || cursor.isSame(targetDate, "day")) {
+    if (scheduleOccursOnDate(schedule, cursor)) {
+      count += 1;
+    }
+
+    cursor = cursor.add(1, "day");
+  }
+
+  return count;
+};
+
+export const scheduleMatchesCountLimit = (schedule: IDB_Schedule, targetDate: dayjs.Dayjs) => {
+  if (schedule.endType !== ScheduleEndType.count || !schedule.occurrenceCount) {
+    return true;
+  }
+
+  return countOccurrencesUntil(schedule, targetDate) <= schedule.occurrenceCount;
+};
+
+export const scheduleMatchesDate = (schedule: IDB_Schedule, targetDate: dayjs.Dayjs) =>
+  scheduleOccursOnDate(schedule, targetDate) && scheduleMatchesCountLimit(schedule, targetDate);
+
+export const toScheduleFormValues = (schedule: IDB_Schedule): ScheduleFormValues => ({
+  id: schedule.id,
+  patientId: schedule.patientId,
+  medicationId: schedule.medicationId,
+  timezone: schedule.timezone,
+  startAt: schedule.startAt,
+  timeSlotsText: schedule.timeSlots.join(", "),
+  amount: schedule.amount.toString(),
+  doseUnit: schedule.doseUnit ?? "",
+  frequencyUnit: schedule.frequencyUnit ?? "",
+  interval: schedule.interval?.toString() ?? "1",
+  weekdays: schedule.weekdays ?? [],
+  endType: schedule.endType ?? "",
+  untilDate: schedule.untilDate ?? "",
+  occurrenceCount: schedule.occurrenceCount?.toString() ?? "",
+});
+
+export const toSchedulePayload = (values: ScheduleFormValues): Omit<IDB_Schedule, "id"> => {
+  const hasFrequency = values.frequencyUnit !== "";
+  const endType = hasFrequency && values.endType !== "" ? values.endType : null;
+
+  return {
+    patientId: values.patientId,
+    medicationId: values.medicationId,
+    timezone: values.timezone,
+    startAt: values.startAt,
+    timeSlots: parseTimeSlots(values.timeSlotsText),
+    amount: Number(values.amount) || 1,
+    doseUnit: values.doseUnit || null,
+    frequencyUnit: hasFrequency ? (values.frequencyUnit as FrequencyUnit) : null,
+    interval: hasFrequency ? Number(values.interval) || 1 : null,
+    weekdays: hasFrequency && values.frequencyUnit === FrequencyUnit.Week ? values.weekdays : null,
+    endType,
+    untilDate: endType === ScheduleEndType.until ? values.untilDate || null : null,
+    occurrenceCount: endType === ScheduleEndType.count ? Number(values.occurrenceCount) || null : null,
+  };
+};
