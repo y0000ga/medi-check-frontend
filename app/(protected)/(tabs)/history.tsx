@@ -20,6 +20,8 @@ import { fetchHistories } from "@/libs/api/history";
 import { useViewerStore } from "@/stores/viewer";
 import { IRES_History } from "@/types/api";
 import { evaluateDosageFormIcon } from "@/utils/common";
+import { HISTORY_STATUS_LABEL } from "@/constants/history";
+import { HistoryStatus } from "@/types/domain";
 
 const Screen = () => {
   const [histories, setHistories] = useState<IRES_History[]>([]);
@@ -130,7 +132,9 @@ const Screen = () => {
             type="subtitle"
             style={styles.subtitle}
           >
-            查看每天的服藥紀錄，包含已服藥與 missed 狀態。
+            查看每天的服藥紀錄，包含
+            {HISTORY_STATUS_LABEL[HistoryStatus.taken]}與
+            {HISTORY_STATUS_LABEL[HistoryStatus.missed]}狀態。
           </ThemedText>
           <View style={styles.calendarCard}>
             <View style={styles.calendarHeader}>
@@ -222,7 +226,8 @@ const Screen = () => {
               <Text
                 style={[styles.summaryChipText, styles.takenChipText]}
               >
-                {takenCount} 已服藥
+                {takenCount}{" "}
+                {HISTORY_STATUS_LABEL[HistoryStatus.taken]}
               </Text>
             </View>
             <View style={[styles.summaryChip, styles.missedChip]}>
@@ -232,7 +237,8 @@ const Screen = () => {
                   styles.missedChipText,
                 ]}
               >
-                {missedCount} Missed
+                {missedCount}{" "}
+                {HISTORY_STATUS_LABEL[HistoryStatus.missed]}
               </Text>
             </View>
           </View>
@@ -243,7 +249,7 @@ const Screen = () => {
                   dosageForm: history.medicationDosageForm,
                 });
                 const statusText =
-                  history.status === "taken" ? "已服藥" : "Missed";
+                  history.status === "taken" ? "已服藥" : "未服藥";
                 const statusColor =
                   history.status === "taken" ? "#16A34A" : "#DC2626";
                 const patientNameTag = getPatientNameTag(history);
@@ -323,7 +329,9 @@ const Screen = () => {
                   這一天沒有紀錄
                 </ThemedText>
                 <ThemedText style={styles.emptyText}>
-                  換一天看看，這裡會顯示已服藥與 missed 的結果。
+                  換一天看看，這裡會顯示
+                  {HISTORY_STATUS_LABEL[HistoryStatus.taken]}與
+                  {HISTORY_STATUS_LABEL[HistoryStatus.missed]}的結果。
                 </ThemedText>
               </View>
             )}

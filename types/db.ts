@@ -63,7 +63,7 @@ export interface IDB_Schedule {
   patientId: IDB_Patient["id"];
   medicationId: IDB_Medication["id"];
   timezone: string;
-  startAt: string;
+  startDate: string;
   timeSlots: string[];
   amount: number;
   doseUnit: DoseUnit | null;

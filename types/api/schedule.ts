@@ -1,23 +1,15 @@
-import {
-  DoseUnit,
-  FrequencyUnit,
-  Weekday,
-} from "@/types/common";
-import { ScheduleEndType } from "@/types/domain";
+import { DoseUnit, FrequencyUnit, Weekday } from "@/types/common";
 
 import { TPaginationParams } from "./base";
 
-export type ApiScheduleEndType =
-  | "never"
-  | "until"
-  | "counts";
+export type ApiScheduleEndType = "never" | "until" | "counts";
 
 export interface IScheduleDetail {
   id: string;
   patient_id: string;
   medication_id: string;
   timezone: string;
-  started_at: string;
+  start_date: string;
   time_slots: string[] | null;
   amount: number;
   dose_unit: DoseUnit | null;
@@ -31,7 +23,7 @@ export interface IScheduleDetail {
 
 export interface ICreateScheduleBody {
   timezone: string;
-  started_at: string;
+  start_date: string;
   time_slots?: string[] | null;
   amount: number;
   dose_unit?: DoseUnit | null;
@@ -45,7 +37,7 @@ export interface ICreateScheduleBody {
 
 export interface IEditScheduleBody {
   timezone?: string | null;
-  started_at?: string | null;
+  start_date?: string | null;
   time_slots?: string[] | null;
   amount?: number | null;
   dose_unit?: DoseUnit | null;

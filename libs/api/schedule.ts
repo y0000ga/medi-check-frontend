@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 
+import { IPaginationResponse } from "@/types/api/base";
 import {
   ApiScheduleEndType,
   ICreateScheduleBody,
@@ -11,7 +12,6 @@ import {
   TGetScheduleMatchesParams,
   TGetSchedulesParams,
 } from "@/types/api/schedule";
-import { IPaginationResponse } from "@/types/api/base";
 import { IDB_Schedule } from "@/types/db";
 import { ScheduleEndType } from "@/types/domain";
 
@@ -63,7 +63,7 @@ const toScheduleResponse = (
   patientId: schedule.patient_id,
   medicationId: schedule.medication_id,
   timezone: schedule.timezone,
-  startAt: schedule.started_at,
+  startDate: schedule.started_date,
   timeSlots: schedule.time_slots ?? [],
   amount: schedule.amount,
   doseUnit: schedule.dose_unit,
@@ -79,7 +79,7 @@ const toCreateScheduleBody = (
   payload: Omit<IDB_Schedule, "id">,
 ): ICreateScheduleBody => ({
   timezone: payload.timezone,
-  started_at: payload.startAt,
+  start_date: payload.startDate,
   time_slots: payload.timeSlots,
   amount: payload.amount,
   dose_unit: payload.doseUnit,
@@ -95,7 +95,7 @@ const toEditScheduleBody = (
   payload: Partial<IDB_Schedule>,
 ): IEditScheduleBody => ({
   timezone: payload.timezone,
-  started_at: payload.startAt,
+  start_date: payload.startDate,
   time_slots: payload.timeSlots,
   amount: payload.amount,
   dose_unit: payload.doseUnit,

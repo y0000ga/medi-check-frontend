@@ -30,9 +30,9 @@ export interface ICreatePatientResponse {
 }
 
 export type TGetPatientsParams = TPaginationParams & {
-  name?: string | null;
+  search?: string | null;
 };
 
 export type TGetPatientOptionsParams = {
-  name?: string | null;
+  search?: string | null;
 };

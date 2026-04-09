@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Redirect, useRouter } from "expo-router";
 import { useRoute } from "@react-navigation/native";
@@ -49,7 +49,7 @@ const CREATE_STEPS = [
   "Medication details",
 ] as const;
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 5;
 
 const MedicationModal = () => {
   const router = useRouter();
@@ -104,7 +104,6 @@ const MedicationModal = () => {
   const [error, setError] = useState("");
 
   const isInfoMode = action === Action.Info;
-  const isCreateMode = action === Action.Create;
   const isWizardMode = action !== Action.Info;
 
   useEffect(() => {
@@ -118,7 +117,7 @@ const MedicationModal = () => {
           page_size: PAGE_SIZE,
           sort_by: "created_at",
           sort_order: "desc",
-          name: patientFilter || null,
+          search: patientFilter || null,
         });
 
         if (!active) {
@@ -182,7 +181,7 @@ const MedicationModal = () => {
       return;
     }
 
-    console.log('here')
+    console.log("here");
 
     loadMedicationDetail(id);
   }, [action, id, loadMedicationDetail]);
@@ -261,15 +260,10 @@ const MedicationModal = () => {
       </View>
 
       <View style={styles.filterSection}>
-        <ThemedText style={styles.filterLabel}>
-          Filter patients on this page
-        </ThemedText>
-        <TextInput
-          style={styles.filterInput}
+        <FieldInput
           value={patientFilter}
           onChangeText={setPatientFilter}
-          placeholder="Search by patient name"
-          placeholderTextColor="#94A3B8"
+          placeholder="搜尋病患名稱"
         />
       </View>
 

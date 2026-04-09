@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
@@ -12,25 +11,27 @@ import InviteForm from "@/components/care-network/InviteForm";
 import SectionCard from "@/components/care-network/SectionCard";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { INVITATION_TYPE_LABEL } from "@/constants/care-relationship";
 import Container from "@/components/ui/container";
 import FieldPicker from "@/components/ui/field-picker";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
-import Header from "@/components/ui/header";
 import ModalHeader from "@/components/ui/modal-header";
+import { INVITATION_STATUS_LABEL } from "@/constants/care-relationship";
 import {
+  acceptInvitation,
   createInvitation,
+  declineInvitation,
   getInvitationList,
+  revokeInvitation,
 } from "@/libs/api/care-invitation";
 import { createInvtationSchema } from "@/schemas/care-inviation";
 import { useUserStore } from "@/stores/user";
+import { IPaginationResponse } from "@/types/api/base";
 import {
-  InvitationDirection,
   IInvitation,
   InvationStatus,
+  InvitationDirection,
   Role,
 } from "@/types/api/care-invitation";
-import { IPaginationResponse } from "@/types/api/base";
 import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
 import { createEnumOptions } from "@/utils/common";
 
@@ -45,7 +46,7 @@ const INVITATION_DIRECTION_LABEL: Record<
   InvitationDirection,
   string
 > = {
-  [InvitationDirection.send]: "我發出的",
+  [InvitationDirection.sent]: "我發出的",
   [InvitationDirection.received]: "我收到的",
 };
 
@@ -107,6 +108,36 @@ const InvitationManagementModal = () => {
     await loadData();
   };
 
+  const handleAccept = async (invitationId: string) => {
+    setLoading(true);
+    try {
+      await acceptInvitation(invitationId);
+      await loadData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDecline = async (invitationId: string) => {
+    setLoading(true);
+    try {
+      await declineInvitation(invitationId);
+      await loadData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRevoke = async (invitationId: string) => {
+    setLoading(true);
+    try {
+      await revokeInvitation(invitationId);
+      await loadData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const totalPages = Math.max(
     1,
     Math.ceil(inviteInfo.total_size / PAGE_SIZE),
@@ -123,7 +154,7 @@ const InvitationManagementModal = () => {
     [],
   );
   const statusOptions = useMemo(
-    () => createEnumOptions(InvationStatus, INVITATION_TYPE_LABEL),
+    () => createEnumOptions(InvationStatus, INVITATION_STATUS_LABEL),
     [],
   );
   const sortOptions = useMemo(
@@ -137,7 +168,7 @@ const InvitationManagementModal = () => {
 
   const filterSummary = `${
     INVITATION_DIRECTION_LABEL[directionFilter]
-  } / ${INVITATION_TYPE_LABEL[statusFilter]} / ${
+  } / ${INVITATION_STATUS_LABEL[statusFilter]} / ${
     SORT_ORDER_LABEL[sortOrder]
   }`;
 
@@ -156,9 +187,7 @@ const InvitationManagementModal = () => {
                 }
               >
                 <ThemedText style={styles.toggleButtonText}>
-                  {isFormExpanded
-                    ? "收合表單"
-                    : "邀請病人或照顧者"}
+                  {isFormExpanded ? "收合表單" : "邀請病人或照顧者"}
                 </ThemedText>
               </Pressable>
 
@@ -230,6 +259,10 @@ const InvitationManagementModal = () => {
                       key={invite.id}
                       invite={invite}
                       isLast={index === inviteInfo.list.length - 1}
+                      direction={directionFilter}
+                      onAccept={handleAccept}
+                      onDecline={handleDecline}
+                      onRevoke={handleRevoke}
                     />
                   ))}
                 </View>

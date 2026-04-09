@@ -33,7 +33,7 @@ export enum InvationStatus {
 }
 
 export enum InvitationDirection {
-  send = "send",
+  sent = "sent",
   received = "received",
 }
 
@@ -44,6 +44,7 @@ export interface IInvitation {
   patient_id: string | null;
   invitee_email: string;
   invitee_user_id: string | null;
+  invitee_name: string;
   invitation_type: InvitationType;
   permission_level: PermissionLevel;
   status: InvationStatus;

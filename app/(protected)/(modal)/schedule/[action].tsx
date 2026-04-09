@@ -96,6 +96,8 @@ const ScheduleModal = () => {
   const [patientPage, setPatientPage] = useState(1);
   const [patientTotalPages, setPatientTotalPages] = useState(1);
   const [patientListLoading, setPatientListLoading] = useState(false);
+  const [patientFilter, setPatientFilter] = useState("");
+  const [medicationFilter, setMedicationFilter] = useState("");
   const [medicationOptions, setMedicationOptions] = useState<
     { label: string; value: string }[]
   >([]);
@@ -158,6 +160,7 @@ const ScheduleModal = () => {
           page_size: PAGE_SIZE,
           sort_by: "created_at",
           sort_order: "desc",
+          search: patientFilter || null,
         });
 
         if (!active) {
@@ -214,10 +217,15 @@ const ScheduleModal = () => {
   }, [
     isWizardMode,
     patientPage,
+    patientFilter,
     viewerMode,
     viewerOwnPatient?.id,
     viewerSelectedPatientId,
   ]);
+
+  useEffect(() => {
+    setPatientPage(1);
+  }, [patientFilter]);
 
   useEffect(() => {
     let active = true;
@@ -230,6 +238,7 @@ const ScheduleModal = () => {
 
       const medications = await fetchMedicationsByPatient(
         schedule.patientId,
+        medicationFilter,
       );
 
       if (!active) {
@@ -264,6 +273,10 @@ const ScheduleModal = () => {
     return () => {
       active = false;
     };
+  }, [medicationFilter, schedule.patientId]);
+
+  useEffect(() => {
+    setMedicationFilter("");
   }, [schedule.patientId]);
 
   useEffect(() => {
@@ -385,43 +398,60 @@ const ScheduleModal = () => {
         </ThemedText>
       </View>
 
-      {patientPageItems.map((patient) => {
-        const selected = schedule.patientId === patient.value;
+      <FieldInput
+        placeholder="依病患名稱搜尋"
+        value={patientFilter}
+        onChangeText={setPatientFilter}
+      />
 
-        return (
-          <Pressable
-            key={patient.value}
-            style={[
-              styles.selectionCard,
-              selected && styles.selectionCardSelected,
-            ]}
-            onPress={() => {
-              setSchedule((current) => ({
-                ...current,
-                patientId: patient.value,
-                medicationId: "",
-              }));
-              setError("");
-            }}
-          >
-            <View style={styles.selectionCardContent}>
-              <ThemedText style={styles.selectionTitle}>
-                {patient.label}
-              </ThemedText>
-              <ThemedText style={styles.selectionMeta}>
-                Permission: {patient.permissionLevel}
-              </ThemedText>
-            </View>
-            {selected ? (
-              <IconSymbol
-                name="check-circle"
-                size={22}
-                color="#2563EB"
-              />
-            ) : null}
-          </Pressable>
-        );
-      })}
+      {patientPageItems.length ? (
+        patientPageItems.map((patient) => {
+          const selected = schedule.patientId === patient.value;
+
+          return (
+            <Pressable
+              key={patient.value}
+              style={[
+                styles.selectionCard,
+                selected && styles.selectionCardSelected,
+              ]}
+              onPress={() => {
+                setSchedule((current) => ({
+                  ...current,
+                  patientId: patient.value,
+                  medicationId: "",
+                }));
+                setError("");
+              }}
+            >
+              <View style={styles.selectionCardContent}>
+                <ThemedText style={styles.selectionTitle}>
+                  {patient.label}
+                </ThemedText>
+                <ThemedText style={styles.selectionMeta}>
+                  Permission: {patient.permissionLevel}
+                </ThemedText>
+              </View>
+              {selected ? (
+                <IconSymbol
+                  name="check-circle"
+                  size={22}
+                  color="#2563EB"
+                />
+              ) : null}
+            </Pressable>
+          );
+        })
+      ) : (
+        <View style={styles.emptyState}>
+          <ThemedText style={styles.emptyStateTitle}>
+            No patients found on this page
+          </ThemedText>
+          <ThemedText style={styles.emptyStateText}>
+            Try a different keyword or move to another page.
+          </ThemedText>
+        </View>
+      )}
 
       <View style={styles.paginationRow}>
         <Pressable
@@ -442,8 +472,7 @@ const ScheduleModal = () => {
         <Pressable
           style={[
             styles.secondaryButton,
-            patientPage >= patientTotalPages &&
-              styles.disabledButton,
+            patientPage >= patientTotalPages && styles.disabledButton,
           ]}
           onPress={() => setPatientPage((current) => current + 1)}
           disabled={patientPage >= patientTotalPages}
@@ -461,7 +490,8 @@ const ScheduleModal = () => {
       <View style={styles.stepHeader}>
         <ThemedText type="subtitle">Step 2 of 3</ThemedText>
         <ThemedText style={styles.stepDescription}>
-          Choose one medication under {selectedPatient?.label ?? "the selected patient"}.
+          Choose one medication under{" "}
+          {selectedPatient?.label ?? "the selected patient"}.
         </ThemedText>
       </View>
 
@@ -474,10 +504,15 @@ const ScheduleModal = () => {
         </ThemedText>
       </View>
 
+      <FieldInput
+        placeholder="依藥品名稱搜尋"
+        value={medicationFilter}
+        onChangeText={setMedicationFilter}
+      />
+
       {medicationOptions.length ? (
         medicationOptions.map((medication) => {
-          const selected =
-            schedule.medicationId === medication.value;
+          const selected = schedule.medicationId === medication.value;
 
           return (
             <Pressable
@@ -513,8 +548,8 @@ const ScheduleModal = () => {
             No medications yet
           </ThemedText>
           <ThemedText style={styles.emptyStateText}>
-            Create a medication for this patient first, then come
-            back to add the schedule.
+            Create a medication for this patient first, then come back
+            to add the schedule.
           </ThemedText>
         </View>
       )}
@@ -737,8 +772,7 @@ const ScheduleModal = () => {
                   <ThemedText
                     style={[
                       styles.weekdayChipText,
-                      selected &&
-                        styles.weekdayChipTextSelected,
+                      selected && styles.weekdayChipTextSelected,
                     ]}
                   >
                     {option.label}
@@ -805,9 +839,7 @@ const ScheduleModal = () => {
 
       {!isEditable ? (
         <View style={styles.summaryCard}>
-          <ThemedText style={styles.summaryTitle}>
-            Summary
-          </ThemedText>
+          <ThemedText style={styles.summaryTitle}>Summary</ThemedText>
           <ThemedText style={styles.summaryText}>
             Start Time: {schedule.startAt}
           </ThemedText>
@@ -847,9 +879,7 @@ const ScheduleModal = () => {
   return (
     <>
       <FullScreenLoading
-        visible={
-          loading || saving || patientListLoading
-        }
+        visible={loading || saving || patientListLoading}
       />
       <ThemedView style={styles.container}>
         <ModalHeader
@@ -891,9 +921,13 @@ const ScheduleModal = () => {
               {stepIndex > 0 ? (
                 <Pressable
                   style={styles.secondaryFooterButton}
-                  onPress={() => setStepIndex((current) => current - 1)}
+                  onPress={() =>
+                    setStepIndex((current) => current - 1)
+                  }
                 >
-                  <ThemedText style={styles.secondaryFooterButtonText}>
+                  <ThemedText
+                    style={styles.secondaryFooterButtonText}
+                  >
                     Back
                   </ThemedText>
                 </Pressable>
@@ -1070,6 +1104,22 @@ const styles = StyleSheet.create({
   },
   selectionMeta: {
     color: "#64748B",
+  },
+  filterSection: {
+    gap: 8,
+  },
+  filterLabel: {
+    color: "#475569",
+    fontWeight: "600",
+  },
+  filterInput: {
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: "#0F172A",
   },
   paginationRow: {
     flexDirection: "row",

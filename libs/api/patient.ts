@@ -231,7 +231,7 @@ export const fetchPatientTodayEvents = async (
       patientId: item.patient_id,
       medicationId: item.medication_id,
       timezone: item.timezone,
-      startAt: item.started_at,
+      startDate: item.start_date,
       timeSlots: item.time_slots ?? [],
       amount: item.amount,
       doseUnit: item.dose_unit,

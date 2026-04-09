@@ -38,11 +38,11 @@ export interface IEditMedicationResponse {
 
 export type TGetMedicationsParams = TPaginationParams & {
   dosage_form?: DosageForm | null;
-  name?: string | null;
+  search?: string | null;
 };
 
 export type TGetAllMedicationsParams = TPaginationParams & {
   patient_ids?: string[] | null;
   dosage_form?: DosageForm | null;
-  name?: string | null;
+  search?: string | null;
 };

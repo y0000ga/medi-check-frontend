@@ -1,7 +1,7 @@
 import { EditableHistoryValues } from "@/types/history";
 import { HistorySource, HistoryStatus } from "@/types/domain";
 
-const HISTORY_STATUS_LABEL = {
+export const HISTORY_STATUS_LABEL = {
   [HistoryStatus.taken]: "已服用",
   [HistoryStatus.missed]: "已錯過",
   [HistoryStatus.pending]: "待處理",

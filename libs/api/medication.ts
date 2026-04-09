@@ -118,7 +118,7 @@ export const fetchMedications = async ({
     sort_by: sortBy,
     sort_order: sortOrder,
     dosage_form: dosageForm ?? null,
-    name: search?.trim() || null,
+    search: search?.trim() || null,
   });
 
   return {
@@ -143,13 +143,14 @@ export const fetchMedicationPatientMap = async () => {
 
 export const fetchMedicationsByPatient = async (
   patientId: string,
+  search?: string,
 ) => {
-  const response = await getAllMedications({
-    patient_ids: [patientId],
+  const response = await getMedicationList(patientId, {
     page: 1,
     page_size: DEFAULT_PAGE_SIZE,
     sort_by: "created_at",
     sort_order: "desc",
+    search: search?.trim() || null,
   });
 
   return response.list.map(toMedicationResponse);

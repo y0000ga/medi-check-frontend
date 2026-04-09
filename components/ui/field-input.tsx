@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { ThemedText } from "../themed-text";
 import { ThemedView } from "../themed-view";
+import { IconSymbol } from "./icon-symbol";
 
 const TEXT_INPUT_PROPS = {
   underlineColorAndroid: "transparent",
@@ -12,7 +13,7 @@ const TEXT_INPUT_PROPS = {
 };
 
 interface IFieldInputProps {
-  label: string;
+  label?: string;
   onChangeText: (text: string) => void;
   value: string;
   placeholder?: string;
@@ -24,6 +25,7 @@ interface IFieldInputProps {
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: boolean;
   required?: boolean;
+  iconName?: string;
 }
 
 const FieldInput = ({
@@ -39,13 +41,16 @@ const FieldInput = ({
   autoCapitalize,
   autoCorrect,
   required = false,
+  iconName,
 }: IFieldInputProps) => {
   return (
     <ThemedView style={styles.field}>
-      <ThemedText style={styles.label}>
-        {label}
-        {required && "*"}
-      </ThemedText>
+      {label && (
+        <ThemedText style={styles.label}>
+          {label}
+          {required && "*"}
+        </ThemedText>
+      )}
       <ThemedView
         style={[
           styles.inputContainer,
@@ -53,8 +58,17 @@ const FieldInput = ({
           disabled && styles.disabled,
         ]}
       >
+        {iconName && (
+          <IconSymbol
+            name={iconName}
+            size={20}
+            color="#6B7280"
+            style={styles.icon}
+          />
+        )}
         <TextInput
           style={[
+            iconName ? { paddingLeft: 40 } : { paddingLeft: 16 },
             styles.input,
             multiline && styles.multilineInput,
             {
@@ -82,6 +96,11 @@ const FieldInput = ({
 export default FieldInput;
 
 const styles = StyleSheet.create({
+  icon: {
+    position: "absolute",
+    top: 14,
+    left: 12,
+  },
   label: {
     color: "#334155",
   },
@@ -95,7 +114,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     width: "100%",
     paddingVertical: 14,
-    paddingHorizontal: 16,
+
+    paddingRight: 16,
     position: "relative",
     borderRadius: 4,
   },

@@ -15,6 +15,7 @@ import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { useMedicationStore } from "@/stores/medication";
 import { useViewerStore } from "@/stores/viewer";
 import { DosageForm } from "@/types/common";
+import FieldInput from "@/components/ui/field-input";
 
 const PAGE_SIZE = 20;
 
@@ -29,9 +30,10 @@ const Screen = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const [sortValue, setSortValue] = useState<
-    (typeof SORT_OPTIONS)[number]["value"]
-  >("created_at:desc");
+  const [sortValue, setSortValue] =
+    useState<(typeof SORT_OPTIONS)[number]["value"]>(
+      "created_at:desc",
+    );
   const [dosageForm, setDosageForm] = useState<DosageForm | "">("");
 
   const medications = useMedicationStore(
@@ -60,8 +62,8 @@ const Screen = () => {
   const filterSummary = [
     search.trim() ? `搜尋：${search.trim()}` : "全部藥品",
     dosageForm ? MEDICATION_DOSAGE_FORM[dosageForm] : "全部劑型",
-    SORT_OPTIONS.find((option) => option.value === sortValue)?.label ??
-      "Newest",
+    SORT_OPTIONS.find((option) => option.value === sortValue)
+      ?.label ?? "Newest",
   ].join(" / ");
 
   const getPatientNameTag = (patientId: string) => {
@@ -140,27 +142,12 @@ const Screen = () => {
 
             {isFilterExpanded ? (
               <View style={styles.filterFields}>
-                <ThemedView style={styles.inputContainer}>
-                  <IconSymbol
-                    name="search"
-                    size={20}
-                    color="#6B7280"
-                    style={styles.searchIcon}
-                  />
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        outlineStyle: "none",
-                      },
-                    ]}
-                    onChangeText={setSearch}
-                    underlineColorAndroid="transparent"
-                    placeholderTextColor="#6B7280"
-                    value={search}
-                    placeholder="搜尋藥品名稱"
-                  />
-                </ThemedView>
+                <FieldInput
+                  iconName="search"
+                  onChangeText={setSearch}
+                  value={search}
+                  placeholder="搜尋藥品名稱與病人名稱"
+                />
 
                 <FieldPicker<DosageForm | "">
                   label="劑型"
@@ -212,8 +199,7 @@ const Screen = () => {
             <Pressable
               style={[
                 styles.paginationButton,
-                page >= totalPages &&
-                  styles.paginationButtonDisabled,
+                page >= totalPages && styles.paginationButtonDisabled,
               ]}
               onPress={() => setPage((current) => current + 1)}
               disabled={page >= totalPages}
