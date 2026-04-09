@@ -8,15 +8,11 @@ import { ROLE_LABEL } from "@/constants/care";
 interface IProps {
   userRole: Role;
   relationship: ICareRelationship;
-  onPermissionChange: () => void;
-  onCaregiverRemove: () => void;
 }
 
 const RelationShipCard = ({
   userRole,
   relationship,
-  onPermissionChange,
-  onCaregiverRemove,
 }: IProps) => {
   return (
     <ThemedView style={styles.patientCard}>
@@ -61,6 +57,8 @@ const RelationShipCard = ({
           </ThemedText>
         </ThemedView>
       </ThemedView>
+      {/* TODO: 移除關係 */}
+      {/* TODO: 編輯權限 */}
     </ThemedView>
   );
 };
@@ -117,6 +115,17 @@ const styles = StyleSheet.create({
   },
   permissionChipTextActive: {
     color: "#1D4ED8",
+  },
+  removeButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+  },
+  removeButtonText: {
+    color: "#DC2626",
+    fontWeight: "700",
   },
   caregiverSection: {
     gap: 10,

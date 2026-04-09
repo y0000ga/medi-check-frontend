@@ -8,7 +8,7 @@ export enum Role {
 export enum PermissionLevel {
   Read = "read",
   Write = "write",
-  Admin = "Admin",
+  Admin = "admin",
 }
 
 export interface ICreateInvitationBody {

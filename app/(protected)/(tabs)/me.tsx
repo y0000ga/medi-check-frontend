@@ -67,7 +67,9 @@ const MeScreen = () => {
       viewer: routes.protected.modal.viewer,
       profile: routes.protected.modal.profile,
       security: routes.protected.modal.security,
-      "care-network": routes.protected.modal.careNetwork,
+      "patient-care": routes.protected.modal.patientCare,
+      "invitation-management":
+        routes.protected.modal.invitationManagement,
     } as const;
 
     router.push(targetRoute[key]);

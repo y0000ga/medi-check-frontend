@@ -23,6 +23,8 @@ export const routes = {
       profile: "/me/profile" as Href,
       security: "/me/security" as Href,
       careNetwork: "/me/care-network" as Href,
+      patientCare: "/me/patient-care" as Href,
+      invitationManagement: "/me/invitation-management" as Href,
       historyDetail: (id: string) =>
         ({
           pathname: "/history/[id]" as const,

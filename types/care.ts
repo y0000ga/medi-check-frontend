@@ -1,8 +1,5 @@
-export enum PermissionLevel {
-  read = "read",
-  write = "write",
-  admin = "admin",
-}
+import { PermissionLevel } from "./api/care-invitation";
+export { PermissionLevel } from "./api/care-invitation";
 
 export enum RelationShipStatus {
   active = "active",
