@@ -1,106 +1,190 @@
 import dayjs from "dayjs";
 
+import { deriveEventsFromClientData } from "@/utils/occurrence";
+import { IRES_Event, IRES_History, IRES_Patient } from "@/types/api";
+import { IPaginationResponse } from "@/types/api/base";
 import {
-  DB_CARE_RELATIONSHIPS,
-  DB_PATIENTS,
-  RES_USERS,
-  deriveEventsByDateForPatient,
-  deriveHistoriesByDateForPatient,
-} from "@/constants/mock";
-import { PermissionLevel, RelationShipStatus } from "@/types/care";
+  InvitationDirection,
+  InvationStatus,
+  PermissionLevel,
+  Role,
+} from "@/types/api/care-invitation";
+import { ICareRelationship } from "@/types/api/care-relationship";
+import {
+  ICreatePatientBody,
+  ICreatePatientResponse,
+  IDetailPatient,
+  IPatient,
+  IPatientOption,
+  TGetPatientOptionsParams,
+  TGetPatientsParams,
+} from "@/types/api/patient";
+import { IInvite, RelationShipStatus } from "@/types/care";
 import {
   IRES_CarePatientSummary,
   IRES_CareRelationship,
-  IRES_Event,
-  IRES_History,
-  IRES_Patient,
 } from "@/types/mock";
+import { ScheduleEndType } from "@/types/domain";
+
+import { getHistoryList } from "./history";
+import { getInvitationList } from "./care-invitation";
+import { getMe } from "./auth";
+import { getMedicationList } from "./medication";
+import { getCareRelationships } from "./care-relationship";
 import { request } from "./client";
-import { ICreatePatientBody } from "@/types/api/patient";
+import { getScheduleMatches } from "./schedule";
 
-type MockCareRelationship = IRES_CareRelationship;
-type MockPatient = IRES_Patient;
+const DEFAULT_PAGE_SIZE = 200;
 
-let mockPatients: MockPatient[] = DB_PATIENTS.map((item) => ({
-  ...item,
-}));
-let mockCareRelationships: MockCareRelationship[] =
-  DB_CARE_RELATIONSHIPS.map((item) => ({ ...item }));
+const toPatientResponse = (
+  patient: IPatient | IDetailPatient,
+): IRES_Patient => ({
+  id: patient.id,
+  ownerUserId: patient.linked_user_id,
+  name: patient.name,
+  birthDate: patient.birth_date,
+  avatarUrl: patient.avatar_url,
+  note: null,
+  createdAt: "",
+  updatedAt: "",
+});
 
-const buildCarePatientSummaries = (): IRES_CarePatientSummary[] =>
-  mockCareRelationships
+const toCarePatientSummary = (
+  relationship: ICareRelationship,
+): IRES_CarePatientSummary => ({
+  patientId: relationship.patient_id,
+  caregiverUserId: relationship.caregiver_user_id,
+  relationshipId: relationship.id,
+  permissionLevel: relationship.permission_level,
+  relationshipStatus: RelationShipStatus.active,
+  patientName: relationship.patient_name,
+  patientAvatarUrl: null,
+  patientBirthDate: null,
+  patientNote: null,
+  ownerUserId: null,
+});
+
+export interface PatientPickerOption {
+  label: string;
+  value: string;
+  avatarUrl: string | null;
+  permissionLevel: PermissionLevel;
+}
+
+const toPatientPickerOption = (
+  patient: IPatientOption,
+): PatientPickerOption => ({
+  label: patient.name,
+  value: patient.id,
+  avatarUrl: patient.avatar_url,
+  permissionLevel: patient.permission_level,
+});
+
+const toDomainEndType = (
+  endType: "never" | "until" | "counts" | null,
+) => {
+  if (endType === null) {
+    return null;
+  }
+
+  if (endType === "counts") {
+    return ScheduleEndType.count;
+  }
+
+  if (endType === "until") {
+    return ScheduleEndType.until;
+  }
+
+  return ScheduleEndType.never;
+};
+
+const toHistoryResponse = (
+  history: Awaited<ReturnType<typeof getHistoryList>>["list"][number],
+): IRES_History => ({
+  id: history.id,
+  scheduleId: history.schedule_id ?? "",
+  patientId: history.patient_id,
+  patientName: "",
+  scheduledTime: history.scheduled_at,
+  intakenTime: history.intake_at,
+  status: history.status,
+  rate: null,
+  takenAmount: history.taken_amount,
+  memo: null,
+  feeling: null,
+  reason: null,
+  source: history.source,
+  symptomTags: [],
+  medicationId: history.medication_id ?? "",
+  medicationName: history.medication_name_snapshot,
+  medicationDosageForm: null,
+  amount: history.amount_snapshot,
+  doseUnit: history.dose_unit_snapshot,
+});
+
+export const fetchOwnedPatient = async (_userId: string) => {
+  const me = await getMe();
+  if (!me.patient_id) {
+    return undefined;
+  }
+
+  const patient = await getPatientDetail(me.patient_id);
+  return toPatientResponse(patient);
+};
+
+export const getPatientOptions = (
+  params?: Partial<TGetPatientOptionsParams>,
+) =>
+  request<
+    { list: IPatientOption[] },
+    undefined,
+    Partial<TGetPatientOptionsParams>
+  >("/patients/options", { params });
+
+export const fetchPatientOptions = async (
+  params?: Partial<TGetPatientOptionsParams>,
+) => {
+  const response = await getPatientOptions(params);
+  return response.list.map(toPatientPickerOption);
+};
+
+export const fetchCarePatients = async (_caregiverUserId: string) => {
+  const [options, response, ownPatient] = await Promise.all([
+    getPatientOptions(),
+    getCareRelationships({
+      page: 1,
+      page_size: DEFAULT_PAGE_SIZE,
+      sort_by: "created_at",
+      sort_order: "desc",
+      direction: Role.Patient,
+    }),
+    fetchOwnedPatient(""),
+  ]);
+
+  const ownPatientId = ownPatient?.id ?? null;
+  const optionMap = new Map(
+    options.list.map((item) => [item.id, item]),
+  );
+
+  return response.list
+    .filter((item) => item.patient_id !== ownPatientId)
     .map((relationship) => {
-      if (!relationship.caregiverUserId) {
-        return null;
-      }
-
-      const patient = mockPatients.find(
-        (item) => item.id === relationship.patientId,
-      );
-
-      if (!patient) {
-        return null;
-      }
+      const option = optionMap.get(relationship.patient_id);
 
       return {
-        patientId: patient.id,
-        caregiverUserId: relationship.caregiverUserId,
-        relationshipId: relationship.id,
-        permissionLevel: relationship.permissionLevel,
-        relationshipStatus: relationship.status,
-        patientName: patient.name,
-        patientAvatarUrl: patient.avatarUrl,
-        patientBirthDate: patient.birthDate,
-        patientNote: patient.note,
-        ownerUserId: patient.ownerUserId,
+        ...toCarePatientSummary(relationship),
+        patientName: option?.name ?? relationship.patient_name,
+        patientAvatarUrl: option?.avatar_url ?? null,
       };
-    })
-    .filter((item): item is IRES_CarePatientSummary => item !== null);
-
-const getPatientOwner = (patientId: string) => {
-  const patient = mockPatients.find((item) => item.id === patientId);
-  return patient?.ownerUserId
-    ? (RES_USERS.find((item) => item.id === patient.ownerUserId) ??
-        null)
-    : null;
-};
-
-export const fetchOwnedPatient = async (userId: string) => {
-  return mockPatients.find((item) => item.ownerUserId === userId);
-};
-
-export const fetchCarePatients = async (caregiverUserId: string) => {
-  return buildCarePatientSummaries().filter(
-    (item) =>
-      item.caregiverUserId === caregiverUserId &&
-      item.relationshipStatus === "active",
-  );
+    });
 };
 
 export const fetchCarePatientDetail = async (
   patientId: string,
-  caregiverUserId?: string,
+  _caregiverUserId?: string,
 ) => {
-  const patient = mockPatients.find((item) => item.id === patientId);
-
-  if (!patient) {
-    return undefined;
-  }
-
-  if (!caregiverUserId) {
-    return patient;
-  }
-
-  const relationship = mockCareRelationships.find(
-    (item) =>
-      item.patientId === patientId &&
-      item.caregiverUserId === caregiverUserId &&
-      item.status === "active",
-  );
-
-  return relationship || patient.ownerUserId === caregiverUserId
-    ? patient
-    : undefined;
+  const patient = await getPatientDetail(patientId);
+  return toPatientResponse(patient);
 };
 
 export const fetchPatientHistories = async (
@@ -108,49 +192,97 @@ export const fetchPatientHistories = async (
   date?: string,
 ) => {
   const targetDate = date ? dayjs(date) : dayjs();
-  return deriveHistoriesByDateForPatient(patientId, targetDate);
+  const response = await getHistoryList({
+    patient_ids: [patientId],
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "scheduled_at",
+    sort_order: "desc",
+    from_date: targetDate.format("YYYY-MM-DD"),
+    to_date: targetDate.format("YYYY-MM-DD"),
+  });
+
+  return response.list.map(toHistoryResponse);
 };
 
 export const fetchPatientTodayEvents = async (
   patientId: string,
   date?: string,
 ) => {
-  const targetDate = date ? dayjs(date) : dayjs();
-  return deriveEventsByDateForPatient(patientId, targetDate);
+  const targetDate = dayjs(date ?? undefined);
+  const [scheduleMatches, medications, histories] = await Promise.all([
+    getScheduleMatches({
+      patient_ids: [patientId],
+      from_date: targetDate.format("YYYY-MM-DD"),
+      to_date: targetDate.format("YYYY-MM-DD"),
+    }),
+    getMedicationList(patientId, {
+      page: 1,
+      page_size: DEFAULT_PAGE_SIZE,
+      sort_by: "created_at",
+      sort_order: "desc",
+    }),
+    fetchPatientHistories(patientId, targetDate.toISOString()),
+  ]);
+
+  return deriveEventsFromClientData({
+    schedules: scheduleMatches.list.map((item) => ({
+      id: item.id,
+      patientId: item.patient_id,
+      medicationId: item.medication_id,
+      timezone: item.timezone,
+      startAt: item.started_at,
+      timeSlots: item.time_slots ?? [],
+      amount: item.amount,
+      doseUnit: item.dose_unit,
+      frequencyUnit: item.frequency_unit,
+      interval: item.interval,
+      weekdays: item.weekdays,
+      endType: toDomainEndType(item.end_type),
+      untilDate: item.until_date,
+      occurrenceCount: item.occurrence_count,
+    })),
+    medications: medications.list.map((item) => ({
+      id: item.id,
+      patientId: item.patient_id,
+      name: item.name,
+      dosageForm: item.dosage_form,
+      memo: "",
+    })),
+    histories,
+    targetDate,
+  });
 };
 
 export const fetchCaregiverHistoryFeed = async (
   caregiverUserId: string,
   date?: string,
 ) => {
-  const targetDate = date ? dayjs(date) : dayjs();
-  const patientIds = mockCareRelationships
-    .filter(
-      (item) =>
-        item.caregiverUserId === caregiverUserId &&
-        item.status === "active",
-    )
-    .map((item) => item.patientId);
+  const carePatients = await fetchCarePatients(caregiverUserId);
+  const patientIds = carePatients.map((item) => item.patientId);
 
-  return patientIds
-    .flatMap((patientId) =>
-      deriveHistoriesByDateForPatient(patientId, targetDate).map(
-        (history) => ({
-          patientId,
-          patientName:
-            DB_PATIENTS.find((item) => item.id === patientId)?.name ??
-            "Unknown Patient",
-          history,
-        }),
-      ),
-    )
-    .sort((a, b) =>
-      dayjs(a.history.scheduledTime).isBefore(
-        dayjs(b.history.scheduledTime),
-      )
-        ? 1
-        : -1,
-    );
+  if (!patientIds.length) {
+    return [];
+  }
+
+  const targetDate = dayjs(date ?? undefined);
+  const response = await getHistoryList({
+    patient_ids: patientIds,
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "scheduled_at",
+    sort_order: "desc",
+    from_date: targetDate.format("YYYY-MM-DD"),
+    to_date: targetDate.format("YYYY-MM-DD"),
+  });
+
+  return response.list.map((history) => ({
+    patientId: history.patient_id,
+    patientName:
+      carePatients.find((item) => item.patientId === history.patient_id)
+        ?.patientName ?? "Unknown Patient",
+    history: toHistoryResponse(history),
+  }));
 };
 
 export interface CareTeamMember {
@@ -176,174 +308,110 @@ export interface CareManagementPatient {
   caregivers: CareTeamMember[];
 }
 
-export const fetchCareManagementPatients = async (userId: string) => {
-  const accessiblePatients = mockPatients.filter((patient) => {
-    if (patient.ownerUserId === userId) {
-      return true;
-    }
+export const fetchCareManagementPatients = async (_userId: string) => {
+  const [ownPatient, relationships] = await Promise.all([
+    fetchOwnedPatient(""),
+    getCareRelationships({
+      page: 1,
+      page_size: DEFAULT_PAGE_SIZE,
+      sort_by: "created_at",
+      sort_order: "desc",
+      direction: Role.Patient,
+    }),
+  ]);
 
-    return mockCareRelationships.some(
-      (relationship) =>
-        relationship.patientId === patient.id &&
-        relationship.caregiverUserId === userId &&
-        relationship.status === "active",
-    );
-  });
+  if (!ownPatient) {
+    return [];
+  }
 
-  return accessiblePatients.map<CareManagementPatient>((patient) => {
-    const owner = getPatientOwner(patient.id);
-    const caregivers = mockCareRelationships
-      .filter(
-        (relationship) =>
-          relationship.patientId === patient.id &&
-          relationship.status !== "revoked" &&
-          relationship.caregiverUserId !== patient.ownerUserId,
-      )
-      .map<CareTeamMember | null>((relationship) => {
-        if (!relationship.caregiverUserId) {
-          return {
-            relationshipId: relationship.id,
-            caregiverUserId: "",
-            caregiverName:
-              relationship.inviteeEmail ?? "Pending invitation",
-            caregiverEmail: relationship.inviteeEmail ?? "",
-            caregiverAvatarUrl: null,
-            permissionLevel: relationship.permissionLevel,
-            status: relationship.status,
-            isPatientOwner: false,
-          };
-        }
-
-        const caregiver = RES_USERS.find(
-          (item) => item.id === relationship.caregiverUserId,
-        );
-
-        if (!caregiver) {
-          return null;
-        }
-
-        return {
-          relationshipId: relationship.id,
-          caregiverUserId: relationship.caregiverUserId,
-          caregiverName: caregiver.name,
-          caregiverEmail: caregiver.email,
-          caregiverAvatarUrl: caregiver.avatarUrl,
-          permissionLevel: relationship.permissionLevel,
-          status: relationship.status,
-          isPatientOwner: false,
-        };
-      })
-      .filter((item): item is CareTeamMember => item !== null);
-
-    const currentRelationship = mockCareRelationships.find(
-      (relationship) =>
-        relationship.patientId === patient.id &&
-        relationship.caregiverUserId === userId &&
-        relationship.status === "active",
-    );
-
-    return {
-      patientId: patient.id,
-      patientName: patient.name,
-      patientAvatarUrl: patient.avatarUrl,
-      patientNote: patient.note,
-      ownerUserId: patient.ownerUserId,
-      ownerName: owner?.name ?? null,
-      ownerEmail: owner?.email ?? null,
-      canManage:
-        patient.ownerUserId === userId ||
-        currentRelationship?.permissionLevel === "admin",
-      caregivers,
-    };
-  });
+  return [
+    {
+      patientId: ownPatient.id,
+      patientName: ownPatient.name,
+      patientAvatarUrl: ownPatient.avatarUrl,
+      patientNote: ownPatient.note,
+      ownerUserId: ownPatient.ownerUserId,
+      ownerName: null,
+      ownerEmail: null,
+      canManage: true,
+      caregivers: relationships.list.map((relationship) => ({
+        relationshipId: relationship.id,
+        caregiverUserId: relationship.caregiver_user_id,
+        caregiverName: relationship.caregiver_name,
+        caregiverEmail: "",
+        caregiverAvatarUrl: null,
+        permissionLevel: relationship.permission_level,
+        status: RelationShipStatus.active,
+        isPatientOwner: false,
+      })),
+    },
+  ];
 };
 
 export const fetchIncomingCareInvitations = async (
-  userId: string,
+  _userId: string,
 ) => {
-  return mockCareRelationships
-    .filter(
-      (relationship) =>
-        relationship.caregiverUserId === userId &&
-        relationship.status === "invited",
-    )
-    .map((relationship) => {
-      const patient = mockPatients.find(
-        (item) => item.id === relationship.patientId,
-      );
+  const response = await getInvitationList({
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "sent_at",
+    sort_order: "desc",
+    direction: InvitationDirection.received,
+    status: InvationStatus.pending,
+  });
 
-      return {
-        relationshipId: relationship.id,
-        patientId: relationship.patientId,
-        patientName: patient?.name ?? "Unknown Patient",
-        inviteeEmail: relationship.inviteeEmail,
-        permissionLevel: relationship.permissionLevel,
-        createdAt: relationship.createdAt,
-        invitedByUserId: relationship.invitedByUserId,
-      };
-    });
+  return response.list
+    .filter((item) => item.patient_id)
+    .map<IInvite>((item) => ({
+      relationshipId: item.id,
+      patientId: item.patient_id!,
+      patientName: "",
+      inviteeEmail: item.invitee_email,
+      permissionLevel: item.permission_level,
+      createdAt: item.sent_at ?? "",
+      invitedByUserId: item.inviter_user_id,
+    }));
 };
 
 export const createCarePatient = async (
   payload: ICreatePatientBody,
 ) => {
-  const body = {
-    email: payload.email,
+  return createPatient({
     birth_date: payload.birth_date,
     avatar_url: null,
     name: payload.name,
-  };
-
-  return request<{ id: string }, ICreatePatientBody>("/patients", {
-    method: "POST",
-    body,
   });
 };
 
+export const getPatientList = (params: TGetPatientsParams) =>
+  request<
+    IPaginationResponse<IPatient>,
+    undefined,
+    TGetPatientsParams
+  >("/patients", { params });
+
+export const getPatientDetail = (patientId: string) =>
+  request<IDetailPatient>(`/patients/${patientId}`);
+
+export const createPatient = (body: ICreatePatientBody) =>
+  request<ICreatePatientResponse, ICreatePatientBody>("/patients", {
+    method: "POST",
+    body,
+  });
+
 export const updateCaregiverPermission = async (
-  relationshipId: string,
-  permissionLevel: PermissionLevel,
+  _relationshipId: string,
+  _permissionLevel: PermissionLevel,
 ) => {
-  const relationship = mockCareRelationships.find(
-    (item) => item.id === relationshipId,
+  throw new Error(
+    "Swagger 目前沒有提供 updateCaregiverPermission API",
   );
-  if (!relationship) {
-    throw new Error("Care relationship not found");
-  }
-
-  const updated: MockCareRelationship = {
-    ...relationship,
-    permissionLevel,
-    updatedAt: dayjs().toISOString(),
-  };
-
-  mockCareRelationships = mockCareRelationships.map((item) =>
-    item.id === relationshipId ? updated : item,
-  );
-
-  return updated;
 };
 
-export const removeCaregiver = async (relationshipId: string) => {
-  const relationship = mockCareRelationships.find(
-    (item) => item.id === relationshipId,
+export const removeCaregiver = async (_relationshipId: string) => {
+  throw new Error(
+    "Swagger 目前沒有提供 removeCaregiver API",
   );
-  if (!relationship) {
-    throw new Error("Care relationship not found");
-  }
-
-  mockCareRelationships = mockCareRelationships.map((item) =>
-    item.id === relationshipId
-      ? {
-          ...item,
-          status: RelationShipStatus.revoked,
-          revokedAt: dayjs().toISOString(),
-          updatedAt: dayjs().toISOString(),
-        }
-      : item,
-  );
-
-  return { success: true };
 };
 
 export type CarePatientDetail = IRES_Patient | undefined;

@@ -7,6 +7,11 @@ export interface AuthSession {
   userId: string;
 }
 
+interface AuthApiSession {
+  access_token: string;
+  user_id: string;
+}
+
 export interface SignInPayload {
   email: string;
   password: string;
@@ -31,6 +36,7 @@ export interface ResetPasswordPayload {
 export interface UpdateProfilePayload {
   name?: string;
   avatarUrl?: string | null;
+  birthDate?: string | null;
 }
 
 interface ApiUserResponse {
@@ -41,7 +47,7 @@ interface ApiUserResponse {
   // TODO: 目前暫不針對 email 是否認證進行處理
   is_email_verified: boolean;
   status: IRES_User["status"];
-  patient_id: string;
+  patient_id: string | null;
 }
 
 export const DEMO_ACCOUNT = {
@@ -50,26 +56,29 @@ export const DEMO_ACCOUNT = {
 } as const;
 
 export const signIn = (payload: SignInPayload) =>
-  request<{ access_token: string; user_id: string }>(
+  request<AuthApiSession>(
     "/auth/sign-in",
     {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: payload,
     },
   ).then((session) => ({
     accessToken: session.access_token,
     userId: session.user_id,
   }));
 
-interface ISignUpResonse {
-  access_token: string;
-  user_id: string;
-}
-
 export const signUp = async (payload: SignUpPayload) =>
-  request<ISignUpResonse>("/auth/sign-up", {
+  request<AuthApiSession>("/auth/sign-up", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: payload,
+  }).then((session) => ({
+    accessToken: session.access_token,
+    userId: session.user_id,
+  }));
+
+export const refreshSession = () =>
+  request<AuthApiSession>("/auth/refresh", {
+    method: "POST",
   }).then((session) => ({
     accessToken: session.access_token,
     userId: session.user_id,
@@ -78,10 +87,14 @@ export const signUp = async (payload: SignUpPayload) =>
 export const forgotPassword = async (
   payload: ForgotPasswordPayload,
 ) => {
-  // return request<{ success: boolean }>(`/auth/forgot-password`, {
-  //   method: "POST",
-  //   body: JSON.stringify(payload),
-  // });
+  await request<unknown, ForgotPasswordPayload>(
+    "/auth/forgot-password",
+    {
+      method: "POST",
+      body: payload,
+    },
+  );
+
   return {
     success: true,
     email: payload.email.trim().toLowerCase(),
@@ -91,13 +104,14 @@ export const forgotPassword = async (
 export const resetPassword = async (
   payload: ResetPasswordPayload,
 ) => {
-  // return request<{ success: boolean }>("/auth/reset-password", {
-  //   method: "POST",
-  //   body: JSON.stringify(payload),
-  // });
   if (payload.password !== payload.confirmPassword) {
     throw new Error("Passwords do not match");
   }
+
+  await request<unknown, ResetPasswordPayload>("/auth/reset-password", {
+    method: "POST",
+    body: payload,
+  });
 
   return { success: true };
 };
@@ -112,10 +126,11 @@ export const updateProfile = async (
 ) => {
   await request<{ id: string }>("/users/me", {
     method: "PATCH",
-    body: JSON.stringify({
+    body: {
       name: payload.name,
       avatar_url: payload.avatarUrl,
-    }),
+      birth_date: payload.birthDate,
+    },
   });
 
   return getMe();
@@ -134,5 +149,6 @@ export const mapApiUser = (user: ApiUserResponse): IRES_User => {
     avatarUrl: user.avatar_url,
     isEmailVerified: user.is_email_verified,
     status: user.status,
+    patient_id: user.patient_id,
   };
 };

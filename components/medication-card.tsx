@@ -12,11 +12,12 @@ interface IProps {
 }
 
 const MedicationCard = ({
-  medication: { id, name, dosageForm },
+  medication: { id, name, dosageForm, patientName },
   patientNameTag,
 }: IProps) => {
   const icon = evaluateDosageFormIcon({ dosageForm });
   const router = useRouter();
+  const displayedPatientName = patientNameTag ?? patientName;
 
   return (
     <Pressable
@@ -52,11 +53,11 @@ const MedicationCard = ({
             />
           </View>
         </View>
-        {patientNameTag ? (
+        {displayedPatientName ? (
           <View style={styles.footer}>
             <View style={styles.patientTag}>
               <Text style={styles.patientTagText}>
-                {patientNameTag}
+                {displayedPatientName}
               </Text>
             </View>
           </View>

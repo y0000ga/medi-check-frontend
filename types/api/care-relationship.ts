@@ -12,6 +12,6 @@ export interface ICareRelationship {
 }
 
 export type TGetCareRelationshipParams = TPaginationParams & {
-  permission_level: PermissionLevel;
-  direction: Role;
+  permission_level?: PermissionLevel | null;
+  direction?: Role | null;
 };

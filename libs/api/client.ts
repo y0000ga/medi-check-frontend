@@ -121,7 +121,16 @@ const formatValidationErrorMessage = (
     .join(", ");
 };
 
-type QueryParamValue = string | number | boolean | null | undefined;
+type QueryParamPrimitive =
+  | string
+  | number
+  | boolean
+  | null
+  | undefined;
+
+type QueryParamValue =
+  | QueryParamPrimitive
+  | (string | number | boolean)[];
 
 interface RequestOptions<B = unknown, P = unknown> extends Omit<
   RequestInit,
@@ -144,6 +153,14 @@ export const request = async <R, B = unknown, P = unknown>(
     (params ?? {}) as Record<string, QueryParamValue>,
   ).forEach(([key, value]) => {
     if (value === null || value === undefined) return;
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => {
+        searchParams.append(key, String(item));
+      });
+      return;
+    }
+
     searchParams.append(key, String(value));
   });
 

@@ -7,22 +7,43 @@ import {
   updateMedication,
   deleteMedication,
 } from "@/libs/api/medication";
-import { IRES_Medication } from "@/types/api";
+import {
+  IREQ_MedicationPayload,
+  IRES_Medication,
+} from "@/types/api";
+import { DosageForm } from "@/types/common";
 
 interface MedicationStore {
   medications: IRES_Medication[];
   selectedMedication: IRES_Medication | null;
+  page: number;
+  pageSize: number;
+  totalSize: number;
   isLoading: boolean[];
   error: string | null;
 
-  loadMedications: ({ search }: { search?: string }) => Promise<void>;
+  loadMedications: ({
+    search,
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    dosageForm,
+  }: {
+    search?: string;
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortOrder?: "desc" | "asc";
+    dosageForm?: DosageForm | null;
+  }) => Promise<void>;
   loadMedicationDetail: (id: string) => Promise<void>;
   addMedication: (
-    payload: Omit<IRES_Medication, "id">,
+    payload: IREQ_MedicationPayload,
   ) => Promise<void>;
   editMedication: (
     id: string,
-    payload: Partial<IRES_Medication>,
+    payload: Partial<IREQ_MedicationPayload>,
   ) => Promise<void>;
   removeMedication: (id: string) => Promise<void>;
   clearError: () => void;
@@ -34,6 +55,9 @@ export const useMedicationStore = create<MedicationStore>()(
   (set, get) => ({
     medications: [],
     selectedMedication: null,
+    page: 1,
+    pageSize: 20,
+    totalSize: 0,
     isLoading: [],
     error: null,
 
@@ -44,13 +68,32 @@ export const useMedicationStore = create<MedicationStore>()(
     removeLoading: () =>
       set((prev) => ({ isLoading: prev.isLoading.slice(0, -1) })),
 
-    loadMedications: async ({ search }: { search?: string }) => {
+    loadMedications: async ({
+      search,
+      page = 1,
+      pageSize = 20,
+      sortBy = "created_at",
+      sortOrder = "desc",
+      dosageForm = null,
+    }) => {
       const { addLoading, clearError, removeLoading } = get();
       try {
         addLoading();
         clearError();
-        const data = await fetchMedications({ search });
-        set({ medications: data });
+        const data = await fetchMedications({
+          search,
+          page,
+          pageSize,
+          sortBy,
+          sortOrder,
+          dosageForm,
+        });
+        set({
+          medications: data.list,
+          page: data.page,
+          pageSize,
+          totalSize: data.totalSize,
+        });
       } catch (error) {
         set({
           error:

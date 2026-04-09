@@ -34,6 +34,5 @@ export const createPatientSchema = (
     name: normalizedName,
     birth_date: normalizedBirthDate,
     avatar_url: null,
-    email: input.email || null,
   };
 };

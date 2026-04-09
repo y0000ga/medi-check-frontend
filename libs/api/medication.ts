@@ -1,44 +1,141 @@
-import { DB_MEDICATIONS, RES_MEDICATIONS } from "@/constants/mock";
+import {
+  IREQ_MedicationPayload,
+  IRES_Medication,
+} from "@/types/api";
+import { IPaginationResponse } from "@/types/api/base";
+import {
+  ICreateMedicationBody,
+  ICreateMedicationResponse,
+  IEditMedicationBody,
+  IEditMedicationResponse,
+  IMedication,
+  IMedicationDetail,
+  TGetAllMedicationsParams,
+  TGetMedicationsParams,
+} from "@/types/api/medication";
+
+import { getAccessiblePatientIds } from "./access";
 import { request } from "./client";
 
-import dayjs from "dayjs";
-import { IRES_Medication } from "@/types/api";
+const DEFAULT_PAGE_SIZE = 200;
 
-let mockMedications: IRES_Medication[] = RES_MEDICATIONS.map(
-  (item) => ({
-    ...item,
-    patientId:
-      DB_MEDICATIONS.find((medication) => medication.id === item.id)
-        ?.patientId ?? "",
-  }),
-);
+export interface MedicationListResult {
+  page: number;
+  totalSize: number;
+  list: IRES_Medication[];
+}
+
+const toMedicationResponse = (
+  medication: IMedication | IMedicationDetail,
+): IRES_Medication => ({
+  id: medication.id,
+  patientId: medication.patient_id,
+  patientName: medication.patient_name,
+  name: medication.name,
+  dosageForm: medication.dosage_form,
+  memo: "note" in medication ? medication.note ?? "" : "",
+});
+
+export const getMedicationList = (
+  patientId: string,
+  params: TGetMedicationsParams,
+) =>
+  request<
+    IPaginationResponse<IMedication>,
+    undefined,
+    TGetMedicationsParams
+  >(`/patients/${patientId}/medications`, { params });
+
+export const getAllMedications = (
+  params: TGetAllMedicationsParams,
+) =>
+  request<
+    IPaginationResponse<IMedication>,
+    undefined,
+    TGetAllMedicationsParams
+  >("/medications", { params });
+
+export const getMedicationDetail = (medicationId: string) =>
+  request<IMedicationDetail>(`/medications/${medicationId}`);
+
+export const createMedicationForPatient = (
+  patientId: string,
+  body: ICreateMedicationBody,
+) =>
+  request<ICreateMedicationResponse, ICreateMedicationBody>(
+    `/patients/${patientId}/medications`,
+    {
+      method: "POST",
+      body,
+    },
+  );
+
+export const editMedication = (
+  medicationId: string,
+  body: IEditMedicationBody,
+) =>
+  request<IEditMedicationResponse, IEditMedicationBody>(
+    `/medications/${medicationId}`,
+    {
+      method: "PATCH",
+      body,
+    },
+  );
+
+export const removeMedication = (medicationId: string) =>
+  request<null>(`/medications/${medicationId}`, {
+    method: "DELETE",
+  });
 
 export const fetchMedications = async ({
   search,
+  page = 1,
+  pageSize = 20,
+  sortBy = "created_at",
+  sortOrder = "desc",
+  dosageForm,
 }: {
   search?: string;
+  page?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortOrder?: "desc" | "asc";
+  dosageForm?: TGetAllMedicationsParams["dosage_form"];
 }) => {
-  const searchParams = new URLSearchParams();
-  search && searchParams.append("search", search);
-  // return request<IMedication[]>(`/medications?${searchParams.toString()}`);
+  // const patientIds = await getAccessiblePatientIds();
+  // if (!patientIds.length) {
+  //   return {
+  //     page,
+  //     totalSize: 0,
+  //     list: [],
+  //   } satisfies MedicationListResult;
+  // }
 
-  return mockMedications.filter((item) => {
-    const keyword = search?.trim().toLowerCase();
-    const isExistedSearch = keyword
-      ? item.name.toLowerCase().includes(keyword) ||
-        item.memo.toLowerCase().includes(keyword)
-      : true;
-    return isExistedSearch;
+  const response = await getAllMedications({
+    // patient_ids: patientIds,
+    page,
+    page_size: pageSize,
+    sort_by: sortBy,
+    sort_order: sortOrder,
+    dosage_form: dosageForm ?? null,
+    name: search?.trim() || null,
   });
+
+  return {
+    page: response.page,
+    totalSize: response.total_size,
+    list: response.list.map(toMedicationResponse),
+  } satisfies MedicationListResult;
 };
 
 export const fetchMedicationDetail = async (id: string) => {
-  // return request<IMedication>(`/medications/${id}`);
-  return mockMedications.find((item) => item.id === id);
+  const detail = await getMedicationDetail(id);
+  return toMedicationResponse(detail);
 };
 
 export const fetchMedicationPatientMap = async () => {
-  return DB_MEDICATIONS.map((item) => ({
+  const medications = await fetchMedications({});
+  return medications.list.map((item) => ({
     medicationId: item.id,
     patientId: item.patientId,
   }));
@@ -47,66 +144,52 @@ export const fetchMedicationPatientMap = async () => {
 export const fetchMedicationsByPatient = async (
   patientId: string,
 ) => {
-  const patientMap = await fetchMedicationPatientMap();
-  const targetMedicationIds = patientMap
-    .filter((item) => item.patientId === patientId)
-    .map((item) => item.medicationId);
+  const response = await getAllMedications({
+    patient_ids: [patientId],
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "created_at",
+    sort_order: "desc",
+  });
 
-  return mockMedications.filter((item) =>
-    targetMedicationIds.includes(item.id),
-  );
+  return response.list.map(toMedicationResponse);
 };
 
 export const createMedication = async (
-  payload: Omit<IRES_Medication, "id">,
+  payload: IREQ_MedicationPayload,
 ) => {
-  // return request<IMedication>('/medications', {
-  //   method: 'POST',
-  //   body: JSON.stringify(payload),
-  // });
+  const created = await createMedicationForPatient(
+    payload.patientId,
+    {
+      name: payload.name,
+      dosage_form: payload.dosageForm,
+      note: payload.memo,
+    },
+  );
 
-  const createdMedication = {
-    ...payload,
-    memo: payload.memo ?? "",
-    id: dayjs().toString(),
-  };
-  mockMedications = [...mockMedications, createdMedication];
-  return createdMedication;
+  return fetchMedicationDetail(created.id);
 };
 
 export const updateMedication = async (
   id: string,
-  payload: Partial<IRES_Medication>,
+  payload: Partial<IREQ_MedicationPayload>,
 ) => {
-  // return request<IMedication>(`/medications/${id}`, {
-  //   method: 'PUT',
-  //   body: JSON.stringify(payload),
-  // });
+  const body: IEditMedicationBody = {};
 
-  const existedMedication = mockMedications.find(
-    (item) => item.id === id,
-  );
-
-  if (!existedMedication) {
-    throw new Error("Medication not found");
+  if ("name" in payload) {
+    body.name = payload.name ?? null;
+  }
+  if ("dosageForm" in payload) {
+    body.dosage_form = payload.dosageForm ?? null;
+  }
+  if ("memo" in payload) {
+    body.note = payload.memo ?? null;
   }
 
-  const updatedMedication = {
-    ...existedMedication,
-    ...payload,
-    id,
-  } as IRES_Medication;
-  mockMedications = mockMedications.map((item) =>
-    item.id === id ? updatedMedication : item,
-  );
-
-  return updatedMedication;
+  await editMedication(id, body);
+  return fetchMedicationDetail(id);
 };
 
 export const deleteMedication = async (id: string) => {
-  // return request<{ success: boolean }>(`/medications/${id}`, {
-  //   method: 'DELETE',
-  // });
-
-  mockMedications = mockMedications.filter((item) => item.id !== id);
+  await removeMedication(id);
 };

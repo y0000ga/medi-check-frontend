@@ -50,11 +50,11 @@ const ProtectedLayout = () => {
   ]);
 
   useEffect(() => {
-    if (!currentUser) {
+    if (!currentUser || !currentUser.patient_id) {
       return;
     }
 
-    hydrateViewer(currentUser.id);
+    hydrateViewer(currentUser?.patient_id);
   }, [currentUser, hydrateViewer]);
 
   if (!hasInitializedAuth || (isAuthenticated && !currentUser)) {

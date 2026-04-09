@@ -1,8 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { router } from "expo-router";
-
 import Container from "@/components/ui/container";
-import Header from "@/components/ui/header";
 import ModalHeader from "@/components/ui/modal-header";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -10,18 +7,8 @@ import { useViewerStore } from "@/stores/viewer";
 
 const ViewerModal = () => {
   const mode = useViewerStore((state) => state.mode);
-  const ownPatient = useViewerStore((state) => state.ownPatient);
-  const carePatients = useViewerStore((state) => state.carePatients);
-  const selectedPatientId = useViewerStore(
-    (state) => state.selectedPatientId,
-  );
+
   const setMode = useViewerStore((state) => state.setMode);
-  const selectPatient = useViewerStore(
-    (state) => state.selectPatient,
-  );
-  const canUseCaregiverView = useViewerStore((state) =>
-    state.canUseCaregiverView(),
-  );
 
   return (
     <ThemedView style={styles.screen}>
@@ -57,96 +44,20 @@ const ViewerModal = () => {
               style={[
                 styles.modeButton,
                 mode === "caregiver" && styles.modeButtonActive,
-                !canUseCaregiverView && styles.modeButtonDisabled,
               ]}
-              onPress={() =>
-                canUseCaregiverView && setMode("caregiver")
-              }
-              disabled={!canUseCaregiverView}
+              onPress={() => setMode("caregiver")}
             >
               <ThemedText
                 style={[
                   styles.modeText,
                   mode === "caregiver" && styles.modeTextActive,
-                  !canUseCaregiverView && styles.modeTextDisabled,
                 ]}
               >
                 照顧者視角
               </ThemedText>
             </Pressable>
           </View>
-
-          {mode === "self" ? (
-            <View style={styles.summaryCard}>
-              <ThemedText style={styles.summaryTitle}>
-                目前設定
-              </ThemedText>
-              <ThemedText style={styles.summaryText}>
-                {ownPatient
-                  ? "你現在會以自己的個人服藥視角查看首頁與歷史紀錄。"
-                  : "目前帳號尚未綁定自己的病人檔案，之後仍可先以個人帳號身份操作。"}
-              </ThemedText>
-            </View>
-          ) : (
-            <View style={styles.patientSection}>
-              <ThemedText style={styles.sectionLabel}>
-                照顧對象
-              </ThemedText>
-
-              <Pressable
-                style={[
-                  styles.patientChip,
-                  selectedPatientId === null &&
-                    styles.patientChipActive,
-                ]}
-                onPress={() => selectPatient(null)}
-              >
-                <ThemedText
-                  style={[
-                    styles.patientChipText,
-                    selectedPatientId === null &&
-                      styles.patientChipTextActive,
-                  ]}
-                >
-                  全部病人
-                </ThemedText>
-              </Pressable>
-
-              {carePatients.map((patient) => (
-                <Pressable
-                  key={patient.patientId}
-                  style={[
-                    styles.patientChip,
-                    selectedPatientId === patient.patientId &&
-                      styles.patientChipActive,
-                  ]}
-                  onPress={() => selectPatient(patient.patientId)}
-                >
-                  <ThemedText
-                    style={[
-                      styles.patientChipText,
-                      selectedPatientId === patient.patientId &&
-                        styles.patientChipTextActive,
-                    ]}
-                  >
-                    {patient.patientName}
-                  </ThemedText>
-                </Pressable>
-              ))}
-            </View>
-          )}
         </View>
-
-        <Header>
-          <Pressable
-            style={styles.doneButton}
-            onPress={() => router.back()}
-          >
-            <ThemedText style={styles.doneButtonText}>
-              完成
-            </ThemedText>
-          </Pressable>
-        </Header>
       </Container>
     </ThemedView>
   );

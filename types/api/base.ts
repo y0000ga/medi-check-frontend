@@ -4,9 +4,11 @@ export interface IPaginationResponse<T> {
   list: T[];
 }
 
-export type TPaginationParams =  {
+export type TSortOrder = "desc" | "asc";
+
+export type TPaginationParams = {
   page: number;
   page_size: number;
   sort_by: string;
-  sort_order: "desc" | "asc";
+  sort_order: TSortOrder;
 };

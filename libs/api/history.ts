@@ -1,72 +1,130 @@
 import dayjs from "dayjs";
 
-import { deriveHistoriesByDate } from "@/constants/mock";
 import { IRES_History } from "@/types/api";
+import { IPaginationResponse } from "@/types/api/base";
+import {
+  IEditHistoryBody,
+  IEditHistoryResponse,
+  IHistory,
+  IHistoryDetail,
+  IQuickCheckHistoryBody,
+  IQuickCheckHistoryResponse,
+  TGetHistoriesParams,
+} from "@/types/api/history";
 
+import { getAccessiblePatientIds } from "./access";
 import { request } from "./client";
 
-let mockHistories = deriveHistoriesByDate(dayjs());
-const historyOverrides = new Map<string, IRES_History>();
+const DEFAULT_PAGE_SIZE = 200;
 
-const applyOverrides = (histories: IRES_History[]) =>
-  histories.map(
-    (history) => historyOverrides.get(history.id) ?? history,
+const toHistoryResponse = (
+  history: IHistory | IHistoryDetail,
+): IRES_History => ({
+  id: history.id,
+  scheduleId: history.schedule_id ?? "",
+  patientId: history.patient_id,
+  patientName: "",
+  scheduledTime: history.scheduled_at,
+  intakenTime: history.intake_at,
+  status: history.status,
+  rate: null,
+  takenAmount: history.taken_amount,
+  memo: "memo" in history ? history.memo : null,
+  feeling:
+    "feeling" in history && history.feeling != null
+      ? String(history.feeling)
+      : null,
+  reason: null,
+  source: history.source,
+  symptomTags: [],
+  medicationId: history.medication_id ?? "",
+  medicationName: history.medication_name_snapshot,
+  medicationDosageForm:
+    "medication_dosage_form_snapshot" in history
+      ? history.medication_dosage_form_snapshot
+      : null,
+  amount: history.amount_snapshot,
+  doseUnit: history.dose_unit_snapshot,
+});
+
+export const getHistoryList = (params: TGetHistoriesParams) =>
+  request<
+    IPaginationResponse<IHistory>,
+    undefined,
+    TGetHistoriesParams
+  >("/histories", { params });
+
+export const getHistoryDetail = (historyId: string) =>
+  request<IHistoryDetail>(`/histories/${historyId}`);
+
+export const editHistory = (
+  historyId: string,
+  body: IEditHistoryBody,
+) =>
+  request<IEditHistoryResponse, IEditHistoryBody>(
+    `/histories/${historyId}`,
+    {
+      method: "PATCH",
+      body,
+    },
   );
 
-const findHistoryAcrossDates = (id: string) => {
-  for (let offset = -30; offset <= 30; offset += 1) {
-    const candidate = deriveHistoriesByDate(
-      dayjs().add(offset, "day"),
-    ).find((item) => item.id === id);
-    if (candidate) {
-      return historyOverrides.get(id) ?? candidate;
-    }
-  }
-
-  return historyOverrides.get(id);
-};
+export const quickCheckHistory = (body: IQuickCheckHistoryBody) =>
+  request<IQuickCheckHistoryResponse, IQuickCheckHistoryBody>(
+    "/histories/quick-check",
+    {
+      method: "POST",
+      body,
+    },
+  );
 
 export const fetchHistories = async (date?: string) => {
-  // return request<IRES_History[]>(`/histories?date=${date ?? ''}`);
+  const patientIds = await getAccessiblePatientIds();
+  if (!patientIds.length) {
+    return [];
+  }
+
   const targetDate = date ? dayjs(date) : dayjs();
-  mockHistories = applyOverrides(deriveHistoriesByDate(targetDate));
-  return mockHistories;
+  const params: TGetHistoriesParams = {
+    patient_ids: patientIds,
+    page: 1,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "scheduled_at",
+    sort_order: "desc",
+    from_date: targetDate.format("YYYY-MM-DD"),
+    to_date: targetDate.format("YYYY-MM-DD"),
+  };
+
+  const response = await getHistoryList(params);
+  return response.list.map(toHistoryResponse);
 };
 
 export const fetchHistoryDetail = async (id: string) => {
-  // return request<IRES_History>(`/histories/${id}`);
-  const cached = mockHistories.find((item) => item.id === id);
-  if (cached) {
-    return historyOverrides.get(id) ?? cached;
-  }
-
-  return findHistoryAcrossDates(id);
+  const detail = await getHistoryDetail(id);
+  return toHistoryResponse(detail);
 };
 
 export const updateHistory = async (
   id: string,
   payload: Partial<IRES_History>,
 ) => {
-  // return request<IRES_History>(`/histories/${id}`, {
-  //   method: 'PUT',
-  //   body: JSON.stringify(payload),
-  // });
-  const existing = await fetchHistoryDetail(id);
+  const body: IEditHistoryBody = {};
 
-  if (!existing) {
-    throw new Error("History not found");
+  if ("intakenTime" in payload) {
+    body.intake_at = payload.intakenTime ?? null;
+  }
+  if ("takenAmount" in payload) {
+    body.taken_amount = payload.takenAmount ?? null;
+  }
+  if ("memo" in payload) {
+    body.memo = payload.memo ?? null;
+  }
+  if ("feeling" in payload) {
+    body.feeling = payload.feeling
+      ? Number(payload.feeling) || null
+      : null;
   }
 
-  const updated: IRES_History = {
-    ...existing,
-    ...payload,
-    id,
-  };
-
-  historyOverrides.set(id, updated);
-  mockHistories = mockHistories.map((item) =>
-    item.id === id ? updated : item,
-  );
-
-  return updated;
+  await editHistory(id, body);
+  return fetchHistoryDetail(id);
 };

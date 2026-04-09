@@ -14,7 +14,7 @@ export interface IRES_User {
   avatarUrl: IDB_User["avatarUrl"];
   isEmailVerified: IDB_User["isEmailVerified"];
   status: IDB_User["status"];
-  patient_id: string,
+  patient_id?: string | null;
 }
 
 export interface IRES_Patient {
@@ -57,6 +57,14 @@ export interface IRES_CarePatientSummary {
 
 export interface IRES_Medication {
   id: IDB_Medication["id"];
+  patientId: IDB_Medication["patientId"];
+  patientName?: IDB_Patient["name"];
+  name: IDB_Medication["name"];
+  dosageForm: IDB_Medication["dosageForm"];
+  memo: string;
+}
+
+export interface IREQ_MedicationPayload {
   patientId: IDB_Medication["patientId"];
   name: IDB_Medication["name"];
   dosageForm: IDB_Medication["dosageForm"];

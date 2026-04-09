@@ -21,7 +21,8 @@ const InviteCard = ({ invite, isLast }: IProps) => {
         <ThemedText style={styles.inviteSubtitle}>
           權限：{PERMISSION_LABEL[invite.permission_level]} ・
           邀請日期：
-          {` ${new Date(invite.sent_at).toLocaleDateString()}`}
+          {invite.sent_at &&
+            ` ${new Date(invite.sent_at).toLocaleDateString()}`}
         </ThemedText>
       </ThemedView>
       <ThemedView style={styles.inviteChip}>

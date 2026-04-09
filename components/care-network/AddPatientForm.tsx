@@ -14,7 +14,6 @@ interface IProps {
 const AddPatientForm = ({ onConfirm }: IProps) => {
   const [name, setName] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const {
     message: feedback,
@@ -24,11 +23,6 @@ const AddPatientForm = ({ onConfirm }: IProps) => {
 
   const handleNameChange = (value: string) => {
     setName(value);
-    setError("");
-  };
-
-  const handleEmailChange = (value: string) => {
-    setEmail(value);
     setError("");
   };
 
@@ -44,11 +38,9 @@ const AddPatientForm = ({ onConfirm }: IProps) => {
       await onConfirm({
         name,
         birthDate,
-        email,
       });
       setName("");
       setBirthDate("");
-      setEmail("");
       showFeedback("已新增病人，現在可以繼續邀請照顧者。");
     } catch (createError) {
       setError(
@@ -67,12 +59,6 @@ const AddPatientForm = ({ onConfirm }: IProps) => {
         value={name}
         onChangeText={handleNameChange}
         placeholder="例如：王媽媽"
-      />
-      <FieldInput
-        label="病人 Email"
-        value={email}
-        onChangeText={handleEmailChange}
-        placeholder="例如：abc@gmail.com"
       />
       <FieldInput
         label="生日"

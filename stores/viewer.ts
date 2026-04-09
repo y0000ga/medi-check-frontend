@@ -16,7 +16,6 @@ interface ViewerStore {
   isLoading: boolean;
   error: string | null;
 
-  canUseCaregiverView: () => boolean;
   hydrateForUser: (userId: string) => Promise<void>;
   setMode: (mode: ViewerMode) => void;
   selectPatient: (patientId: string | null) => void;
@@ -30,8 +29,6 @@ export const useViewerStore = create<ViewerStore>()((set, get) => ({
   selectedPatientId: null,
   isLoading: false,
   error: null,
-
-  canUseCaregiverView: () => get().carePatients.length > 0,
 
   hydrateForUser: async (userId) => {
     set({ isLoading: true, error: null });

@@ -45,7 +45,7 @@ const Screen = () => {
 
       const items = deriveEventsFromClientData({
         schedules,
-        medications,
+        medications: medications.list,
         histories,
         targetDate,
       });
