@@ -28,10 +28,6 @@ interface ApiResponse<T> {
   data: T | null;
 }
 
-interface RequestOptions extends RequestInit {
-  token?: string | null;
-}
-
 let accessToken: string | null = null;
 
 export class ApiRequestError extends Error {
@@ -62,7 +58,7 @@ export const setAccessToken = (token: string | null) => {
   accessToken = token;
 };
 
-const isApiResponse = <T,>(
+const isApiResponse = <T>(
   payload: unknown,
 ): payload is ApiResponse<T> => {
   return Boolean(
@@ -125,14 +121,44 @@ const formatValidationErrorMessage = (
     .join(", ");
 };
 
-export const request = async <T,>(
-  path: string,
-  options: RequestOptions = {},
-): Promise<T> => {
-  const { token, headers, ...rest } = options;
+type QueryParamValue = string | number | boolean | null | undefined;
 
-  const response = await fetch(`${BASE_URL}${path}`, {
+interface RequestOptions<B = unknown, P = unknown> extends Omit<
+  RequestInit,
+  "body"
+> {
+  body?: B;
+  params?: P;
+  token?: string | null;
+}
+
+export const request = async <R, B = unknown, P = unknown>(
+  path: string,
+  options: RequestOptions<B, P> = {},
+): Promise<R> => {
+  const { body, params, token, headers, ...rest } = options;
+
+  const searchParams = new URLSearchParams();
+
+  Object.entries(
+    (params ?? {}) as Record<string, QueryParamValue>,
+  ).forEach(([key, value]) => {
+    if (value === null || value === undefined) return;
+    searchParams.append(key, String(value));
+  });
+
+  const queryString = searchParams.toString();
+  const url = `${BASE_URL}${path}${queryString ? `?${queryString}` : ""}`;
+  const requestBody: BodyInit | undefined =
+    body === undefined || body === null
+      ? undefined
+      : typeof body === "string"
+        ? body
+        : JSON.stringify(body);
+
+  const response = await fetch(url, {
     ...rest,
+    body: requestBody,
     headers: {
       "Content-Type": "application/json",
       ...((token ?? accessToken)
@@ -185,7 +211,7 @@ export const request = async <T,>(
     });
   }
 
-  if (isApiResponse<T>(payload)) {
+  if (isApiResponse<R>(payload)) {
     if (!payload.success || payload.data === null) {
       throw new ApiRequestError({
         message: formatErrorMessage(payload.error),
@@ -198,5 +224,5 @@ export const request = async <T,>(
     return payload.data;
   }
 
-  return payload as T;
+  return payload as R;
 };

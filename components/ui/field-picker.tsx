@@ -10,6 +10,7 @@ interface IFieldPickerProps<T> {
   options: { label: string; value: T }[];
   placeholder?: string;
   disabled?: boolean;
+  required?: boolean;
 }
 
 const FieldPicker = <T extends string>({
@@ -19,6 +20,7 @@ const FieldPicker = <T extends string>({
   onValueChange,
   options,
   disabled,
+  required = false,
 }: IFieldPickerProps<T>) => {
   const [visible, setVisible] = useState(false);
   const selectedOption = options.find(
@@ -27,7 +29,10 @@ const FieldPicker = <T extends string>({
 
   return (
     <ThemedView style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      <ThemedText style={styles.label}>
+        {label}
+        {required && "*"}
+      </ThemedText>
       <Pressable
         style={[styles.inputContainer, disabled && styles.disabled]}
         onPress={() => {

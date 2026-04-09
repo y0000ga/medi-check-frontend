@@ -1,32 +1,31 @@
 import { StyleSheet } from "react-native";
 import { ThemedView } from "../themed-view";
-import { IInvite } from "@/types/care";
 import { ThemedText } from "../themed-text";
 import { PERMISSION_LABEL } from "@/constants/care";
+import { IInvitation } from "@/types/api/care-invitation";
 
 interface IProps {
-  invite: IInvite;
+  invite: IInvitation;
   isLast: boolean;
 }
 
 const InviteCard = ({ invite, isLast }: IProps) => {
   return (
     <ThemedView
-      key={invite.relationshipId}
       style={[styles.inviteRow, isLast && styles.inviteRowLast]}
     >
       <ThemedView style={styles.inviteMeta}>
         <ThemedText style={styles.inviteTitle}>
-          {invite.patientName}
+          邀請者：{invite.inviter_name}
         </ThemedText>
         <ThemedText style={styles.inviteSubtitle}>
-          權限：{PERMISSION_LABEL[invite.permissionLevel]} ・
+          權限：{PERMISSION_LABEL[invite.permission_level]} ・
           邀請日期：
-          {` ${new Date(invite.createdAt).toLocaleDateString()}`}
+          {` ${new Date(invite.sent_at).toLocaleDateString()}`}
         </ThemedText>
       </ThemedView>
       <ThemedView style={styles.inviteChip}>
-        <ThemedText style={styles.inviteChipText}>邀請中</ThemedText>
+        <ThemedText style={styles.inviteChipText}>{}</ThemedText>
       </ThemedView>
     </ThemedView>
   );

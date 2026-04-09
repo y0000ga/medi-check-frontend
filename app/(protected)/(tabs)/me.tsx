@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useRouter } from "expo-router";
 
 import Container from "@/components/ui/container";
@@ -15,9 +15,6 @@ import { SETTING_MENU_ITEMS } from "@/constants/user";
 const MeScreen = () => {
   const router = useRouter();
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
   const userLoading = useUserStore(
     (state) => state.isLoading.length > 0,
   );
@@ -28,19 +25,7 @@ const MeScreen = () => {
     (state) => state.selectedPatientId,
   );
   const viewerLoading = useViewerStore((state) => state.isLoading);
-  const hydrateViewer = useViewerStore(
-    (state) => state.hydrateForUser,
-  );
   const logout = useUserStore((state) => state.logout);
-
-  useEffect(() => {
-    if (!currentUser) {
-      loadCurrentUser();
-      return;
-    }
-
-    hydrateViewer(currentUser.id);
-  }, [currentUser, hydrateViewer, loadCurrentUser]);
 
   const initials = useMemo(() => {
     const source = currentUser?.name || "Medi Check";

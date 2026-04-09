@@ -14,7 +14,7 @@ export const routes = {
       }) as const,
   },
   protected: {
-    home: "/" as Href,
+    home: "/(protected)/(tabs)" as Href,
     history: "/history" as Href,
     medication: "/medication" as Href,
     me: "/me" as Href,

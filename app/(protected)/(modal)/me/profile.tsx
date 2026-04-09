@@ -14,9 +14,6 @@ import { USER_STATUS_LABEL } from "@/constants/user";
 
 const ProfileModal = () => {
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
   const updateProfile = useUserStore((state) => state.updateProfile);
   const loading = useUserStore((state) => state.isLoading.length > 0);
 
@@ -26,13 +23,12 @@ const ProfileModal = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      loadCurrentUser();
       return;
     }
 
     setName(currentUser.name);
     setAvatarUrl(currentUser.avatarUrl ?? "");
-  }, [currentUser, loadCurrentUser]);
+  }, [currentUser]);
 
   const initials = useMemo(() => {
     const source = name || currentUser?.name || "Medi Check";

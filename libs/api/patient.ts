@@ -15,6 +15,8 @@ import {
   IRES_History,
   IRES_Patient,
 } from "@/types/mock";
+import { request } from "./client";
+import { ICreatePatientBody } from "@/types/api/patient";
 
 type MockCareRelationship = IRES_CareRelationship;
 type MockPatient = IRES_Patient;
@@ -67,9 +69,7 @@ export const fetchOwnedPatient = async (userId: string) => {
   return mockPatients.find((item) => item.ownerUserId === userId);
 };
 
-export const fetchCarePatients = async (
-  caregiverUserId: string,
-) => {
+export const fetchCarePatients = async (caregiverUserId: string) => {
   return buildCarePatientSummaries().filter(
     (item) =>
       item.caregiverUserId === caregiverUserId &&
@@ -176,9 +176,7 @@ export interface CareManagementPatient {
   caregivers: CareTeamMember[];
 }
 
-export const fetchCareManagementPatients = async (
-  userId: string,
-) => {
+export const fetchCareManagementPatients = async (userId: string) => {
   const accessiblePatients = mockPatients.filter((patient) => {
     if (patient.ownerUserId === userId) {
       return true;
@@ -286,125 +284,20 @@ export const fetchIncomingCareInvitations = async (
     });
 };
 
-export const inviteCaregiver = async (payload: {
-  patientId: string;
-  caregiverEmail: string;
-  permissionLevel: PermissionLevel;
-  invitedByUserId?: string | null;
-}) => {
-  const patient = mockPatients.find(
-    (item) => item.id === payload.patientId,
-  );
-  if (!patient) {
-    throw new Error("Patient not found");
-  }
-
-  const normalizedEmail = payload.caregiverEmail.trim().toLowerCase();
-  const caregiver = RES_USERS.find(
-    (item) => item.email.toLowerCase() === normalizedEmail,
-  );
-
-  if (caregiver && patient.ownerUserId === caregiver.id) {
-    throw new Error(
-      "Patient owner does not need an extra caregiver relationship",
-    );
-  }
-
-  const existed = mockCareRelationships.find(
-    (item) =>
-      item.patientId === payload.patientId &&
-      ((caregiver && item.caregiverUserId === caregiver.id) ||
-        false ||
-        item.inviteeEmail?.toLowerCase() === normalizedEmail) &&
-      item.status !== "revoked",
-  );
-
-  if (existed) {
-    throw new Error(
-      "This caregiver has already been linked or invited",
-    );
-  }
-
-  const relationship: MockCareRelationship = {
-    id: `care-${String(mockCareRelationships.length + 1).padStart(2, "0")}`,
-    caregiverUserId: caregiver?.id ?? null,
-    patientId: payload.patientId,
-    inviteeEmail: normalizedEmail,
-    invitedByUserId: payload.invitedByUserId ?? null,
-    permissionLevel: payload.permissionLevel,
-    status: RelationShipStatus.invited,
-    acceptedAt: null,
-    revokedAt: null,
-    createdAt: dayjs().toISOString(),
-    updatedAt: dayjs().toISOString(),
+export const createCarePatient = async (
+  payload: ICreatePatientBody,
+) => {
+  const body = {
+    email: payload.email,
+    birth_date: payload.birth_date,
+    avatar_url: null,
+    name: payload.name,
   };
 
-  mockCareRelationships = [...mockCareRelationships, relationship];
-  return relationship;
-};
-
-export const createCarePatient = async (payload: {
-  creatorUserId: string;
-  patientName: string;
-  birthDate?: string | null;
-  note?: string | null;
-}) => {
-  const normalizedName = payload.patientName.trim();
-
-  if (!normalizedName) {
-    throw new Error("請先輸入病人姓名");
-  }
-
-  const normalizedBirthDate = payload.birthDate?.trim() ?? "";
-  const birthDateValue = dayjs(normalizedBirthDate);
-  const isBirthDateValid =
-    !normalizedBirthDate ||
-    (/^\d{4}-\d{2}-\d{2}$/.test(normalizedBirthDate) &&
-      birthDateValue.isValid() &&
-      birthDateValue.format("YYYY-MM-DD") === normalizedBirthDate);
-
-  if (!isBirthDateValid) {
-    throw new Error("生日格式請使用 YYYY-MM-DD");
-  }
-
-  const normalizedNote = payload.note?.trim() ?? "";
-  const now = dayjs().toISOString();
-  const nextPatientIndex = mockPatients.length + 1;
-  const patientId = `p${nextPatientIndex}`;
-
-  const patient: MockPatient = {
-    id: patientId,
-    ownerUserId: null,
-    name: normalizedName,
-    birthDate: normalizedBirthDate || null,
-    avatarUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(normalizedName)}`,
-    note: normalizedNote || null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  mockPatients = [...mockPatients, patient];
-
-  const relationship: MockCareRelationship = {
-    id: `care-${String(mockCareRelationships.length + 1).padStart(2, "0")}`,
-    caregiverUserId: payload.creatorUserId,
-    patientId,
-    inviteeEmail: null,
-    invitedByUserId: payload.creatorUserId,
-    permissionLevel: PermissionLevel.admin,
-    status: RelationShipStatus.active,
-    acceptedAt: now,
-    revokedAt: null,
-    createdAt: now,
-    updatedAt: now,
-  };
-
-  mockCareRelationships = [...mockCareRelationships, relationship];
-
-  return {
-    patient,
-    relationship,
-  };
+  return request<{ id: string }, ICreatePatientBody>("/patients", {
+    method: "POST",
+    body,
+  });
 };
 
 export const updateCaregiverPermission = async (

@@ -50,9 +50,6 @@ const MedicationModal = () => {
   const { action, id } = params as { action: Action; id?: string };
 
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
   const userLoading = useUserStore(
     (state) => state.isLoading.length > 0,
   );
@@ -93,12 +90,6 @@ const MedicationModal = () => {
   const [error, setError] = useState("");
 
   const isInfoMode = action === Action.Info;
-
-  useEffect(() => {
-    if (!currentUser) {
-      loadCurrentUser();
-    }
-  }, [currentUser, loadCurrentUser]);
 
   useEffect(() => {
     let active = true;

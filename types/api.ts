@@ -14,6 +14,7 @@ export interface IRES_User {
   avatarUrl: IDB_User["avatarUrl"];
   isEmailVerified: IDB_User["isEmailVerified"];
   status: IDB_User["status"];
+  patient_id: string,
 }
 
 export interface IRES_Patient {

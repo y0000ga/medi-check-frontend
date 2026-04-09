@@ -41,6 +41,7 @@ interface ApiUserResponse {
   // TODO: 目前暫不針對 email 是否認證進行處理
   is_email_verified: boolean;
   status: IRES_User["status"];
+  patient_id: string;
 }
 
 export const DEMO_ACCOUNT = {
@@ -125,9 +126,7 @@ export const signOut = () =>
     method: "POST",
   });
 
-export const mapApiUser = (
-  user: ApiUserResponse,
-): IRES_User => {
+export const mapApiUser = (user: ApiUserResponse): IRES_User => {
   return {
     id: user.id,
     email: user.email,

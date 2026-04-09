@@ -23,6 +23,7 @@ interface IFieldInputProps {
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   autoCorrect?: boolean;
+  required?: boolean;
 }
 
 const FieldInput = ({
@@ -37,10 +38,14 @@ const FieldInput = ({
   keyboardType,
   autoCapitalize,
   autoCorrect,
+  required = false,
 }: IFieldInputProps) => {
   return (
     <ThemedView style={styles.field}>
-      <ThemedText style={styles.label}>{label}</ThemedText>
+      <ThemedText style={styles.label}>
+        {label}
+        {required && "*"}
+      </ThemedText>
       <ThemedView
         style={[
           styles.inputContainer,

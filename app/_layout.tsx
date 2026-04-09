@@ -15,7 +15,6 @@ export const unstable_settings = {
 
 const RootLayout = () => {
   const colorScheme = useColorScheme();
-
   return (
     <ThemeProvider
       value={colorScheme === "dark" ? DarkTheme : DefaultTheme}

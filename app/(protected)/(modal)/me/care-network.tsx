@@ -1,216 +1,138 @@
+import { router } from "expo-router";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from "react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { router } from "expo-router";
 
 import Container from "@/components/ui/container";
-import FieldInput from "@/components/ui/field-input";
-import FieldPicker from "@/components/ui/field-picker";
+
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import Header from "@/components/ui/header";
 import ModalHeader from "@/components/ui/modal-header";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import { createCarePatient } from "@/libs/api/patient";
 import { useUserStore } from "@/stores/user";
-import {
-  createCarePatient,
-  fetchCareManagementPatients,
-  fetchIncomingCareInvitations,
-  inviteCaregiver,
-  removeCaregiver,
-  updateCaregiverPermission,
-  type CareManagementPatient,
-} from "@/libs/api/patient";
-import { IInvite, PermissionLevel } from "@/types/care";
-import { PERMISSION_OPTIONS } from "@/constants/care";
+import { IInvite } from "@/types/care";
+
+import AddPatientForm from "@/components/care-network/AddPatientForm";
 import InviteCard from "@/components/care-network/InviteCard";
-import PatientCard from "@/components/care-network/PatientCard";
+import InviteForm from "@/components/care-network/InviteForm";
+import RelationShipCard from "@/components/care-network/RelationShipCard";
+import SectionCard from "@/components/care-network/SectionCard";
+import {
+  createInvitation,
+  getInvitationList,
+} from "@/libs/api/care-invitation";
+import { getCareRelationships } from "@/libs/api/care-relationship";
+import { createInvtationSchema } from "@/schemas/care-inviation";
+import { createPatientSchema } from "@/schemas/patient";
+import {
+  IInvitation,
+  InvationStatus,
+  InvitationDirection,
+  PermissionLevel,
+  Role,
+} from "@/types/api/care-invitation";
+import { ICareRelationship } from "@/types/api/care-relationship";
+import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
+import { ICreatePatientInput } from "@/types/schemas/patient";
+import { IPaginationResponse } from "@/types/api/base";
 
 const CareNetworkModal = () => {
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
   const userLoading = useUserStore(
     (state) => state.isLoading.length > 0,
   );
 
-  const [patients, setPatients] = useState<CareManagementPatient[]>(
-    [],
-  );
-  const [invites, setInvites] = useState<IInvite[]>([]);
+  const [relationsInfo, setRelationshipsInfo] = useState<
+    IPaginationResponse<ICareRelationship>
+  >({
+    page: 1,
+    total_size: 0,
+    list: [],
+  });
+  const [inviteInfo, setInviteInfo] = useState<
+    IPaginationResponse<IInvitation>
+  >({
+    page: 1,
+    total_size: 0,
+    list: [],
+  });
   const [loading, setLoading] = useState(false);
-  const [selectedPatientId, setSelectedPatientId] = useState("");
-  const [newPatientName, setNewPatientName] = useState("");
-  const [newPatientBirthDate, setNewPatientBirthDate] = useState("");
-  const [newPatientNote, setNewPatientNote] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [invitePermission, setInvitePermission] =
-    useState<PermissionLevel>(PermissionLevel.read);
-  const [patientFeedback, setPatientFeedback] = useState("");
-  const [patientError, setPatientError] = useState("");
-  const [inviteFeedback, setInviteFeedback] = useState("");
-  const [inviteError, setInviteError] = useState("");
 
-  const loadData = useCallback(async (userId: string) => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [patientItems, inviteItems] = await Promise.all([
-        fetchCareManagementPatients(userId),
-        fetchIncomingCareInvitations(userId),
+      const [relationship, invitation] = await Promise.all([
+        getCareRelationships({
+          page: 1,
+          page_size: 10,
+          sort_by: "created_at",
+          sort_order: "desc",
+          permission_level: PermissionLevel.Write,
+          direction: Role.Patient,
+        }),
+        getInvitationList({
+          page: 1,
+          page_size: 10,
+          sort_by: "created_at",
+          sort_order: "desc",
+          direction: InvitationDirection.received,
+          status: InvationStatus.pending,
+        }),
       ]);
 
-      setPatients(patientItems);
-      setInvites(inviteItems);
-      setSelectedPatientId((current) => {
-        if (
-          current &&
-          patientItems.some(
-            (item) => item.patientId === current && item.canManage,
-          )
-        ) {
-          return current;
-        }
-
-        return (
-          patientItems.find((item) => item.canManage)?.patientId ?? ""
-        );
-      });
+      setRelationshipsInfo(relationship);
+      setInviteInfo(invitation);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    if (!currentUser) {
-      loadCurrentUser();
-      return;
-    }
+    loadData();
+  }, [loadData]);
 
-    loadData(currentUser.id);
-  }, [currentUser, loadCurrentUser, loadData]);
-
-  const manageablePatients = useMemo(
-    () => patients.filter((patient) => patient.canManage),
-    [patients],
-  );
-
-  const patientOptions = useMemo(
-    () =>
-      manageablePatients.map((patient) => ({
-        label: patient.patientName,
-        value: patient.patientId,
-      })),
-    [manageablePatients],
-  );
-
-  const clearStatus = () => {
-    setPatientFeedback("");
-    setPatientError("");
-    setInviteFeedback("");
-    setInviteError("");
+  const handleCreatePatient = async (input: ICreatePatientInput) => {
+    const body = createPatientSchema(input);
+    await createCarePatient(body);
+    await loadData();
   };
 
-  const handleCreatePatient = async () => {
-    if (!currentUser) {
-      return;
-    }
-
-    try {
-      setPatientError("");
-      setPatientFeedback("");
-      setInviteFeedback("");
-      setInviteError("");
-
-      const result = await createCarePatient({
-        creatorUserId: currentUser.id,
-        patientName: newPatientName,
-        birthDate: newPatientBirthDate,
-        note: newPatientNote,
-      });
-
-      setNewPatientName("");
-      setNewPatientBirthDate("");
-      setNewPatientNote("");
-      setSelectedPatientId(result.patient.id);
-      setPatientFeedback("已新增病人，現在可以繼續邀請照顧者。");
-      await loadData(currentUser.id);
-    } catch (createError) {
-      setPatientError(
-        createError instanceof Error
-          ? createError.message
-          : "新增病人失敗",
-      );
-    }
-  };
-
-  const handleInvite = async () => {
-    if (!currentUser) {
-      return;
-    }
-
-    if (!selectedPatientId) {
-      setInviteError("請先選擇要邀請照顧者的病人");
-      return;
-    }
-
-    if (!inviteEmail.trim()) {
-      setInviteError("請輸入照顧者 Email");
-      return;
-    }
-
-    try {
-      setInviteError("");
-      setInviteFeedback("");
-      setPatientError("");
-      setPatientFeedback("");
-
-      await inviteCaregiver({
-        patientId: selectedPatientId,
-        caregiverEmail: inviteEmail,
-        permissionLevel: invitePermission,
-      });
-
-      setInviteEmail("");
-      setInvitePermission(PermissionLevel.read);
-      setInviteFeedback("邀請已送出");
-      await loadData(currentUser.id);
-    } catch (inviteActionError) {
-      setInviteError(
-        inviteActionError instanceof Error
-          ? inviteActionError.message
-          : "邀請照顧者失敗",
-      );
-    }
+  const handleInvite = async (
+    role: Role,
+    input: ICreateInvitationInput,
+  ) => {
+    const body = createInvtationSchema(input);
+    await createInvitation(role, body);
+    await loadData();
   };
 
   const handleUpdatePermission = async (
     relationshipId: string,
     permissionLevel: PermissionLevel,
   ) => {
-    if (!currentUser) {
-      return;
-    }
-
-    try {
-      clearStatus();
-      await updateCaregiverPermission(
-        relationshipId,
-        permissionLevel,
-      );
-      setInviteFeedback("照顧者權限已更新");
-      await loadData(currentUser.id);
-    } catch (updateError) {
-      setInviteError(
-        updateError instanceof Error
-          ? updateError.message
-          : "更新權限失敗",
-      );
-    }
+    // if (!currentUser) {
+    //   return;
+    // }
+    // try {
+    //   await updateCaregiverPermission(
+    //     relationshipId,
+    //     permissionLevel,
+    //   );
+    //   setInviteFeedback("照顧者權限已更新");
+    //   await loadData();
+    // } catch (updateError) {
+    //   setInviteError(
+    //     updateError instanceof Error
+    //       ? updateError.message
+    //       : "更新權限失敗",
+    //   );
+    // }
   };
 
   const handleRemoveCaregiver = async (relationshipId: string) => {
@@ -218,18 +140,17 @@ const CareNetworkModal = () => {
       return;
     }
 
-    try {
-      clearStatus();
-      await removeCaregiver(relationshipId);
-      setInviteFeedback("照顧者已移除");
-      await loadData(currentUser.id);
-    } catch (removeError) {
-      setInviteError(
-        removeError instanceof Error
-          ? removeError.message
-          : "移除照顧者失敗",
-      );
-    }
+    // try {
+    //   await removeCaregiver(relationshipId);
+    //   setInviteFeedback("照顧者已移除");
+    //   await loadData();
+    // } catch (removeError) {
+    //   setInviteError(
+    //     removeError instanceof Error
+    //       ? removeError.message
+    //       : "移除照顧者失敗",
+    //   );
+    // }
   };
 
   return (
@@ -251,15 +172,15 @@ const CareNetworkModal = () => {
             <View style={styles.summaryRow}>
               <View style={styles.summaryCard}>
                 <ThemedText style={styles.summaryValue}>
-                  {manageablePatients.length}
+                  {relationsInfo.total_size}
                 </ThemedText>
                 <ThemedText style={styles.summaryLabel}>
-                  可管理病人
+                  照護關係
                 </ThemedText>
               </View>
               <View style={styles.summaryCard}>
                 <ThemedText style={styles.summaryValue}>
-                  {invites.length}
+                  {inviteInfo.total_size}
                 </ThemedText>
                 <ThemedText style={styles.summaryLabel}>
                   待接受邀請
@@ -267,138 +188,52 @@ const CareNetworkModal = () => {
               </View>
             </View>
 
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                新增病人
-              </ThemedText>
+            <SectionCard title="新增無帳號病人">
               <View style={styles.inviteCard}>
-                <FieldInput
-                  label="病人姓名"
-                  value={newPatientName}
-                  onChangeText={setNewPatientName}
-                  placeholder="例如：王媽媽"
-                />
-                <FieldInput
-                  label="生日"
-                  value={newPatientBirthDate}
-                  onChangeText={setNewPatientBirthDate}
-                  placeholder="YYYY-MM-DD"
-                />
-                <FieldInput
-                  label="備註"
-                  value={newPatientNote}
-                  onChangeText={setNewPatientNote}
-                  placeholder="例如：需要家人協助用藥管理"
-                  multiline
-                  numberOfLines={4}
-                />
-                {patientFeedback ? (
-                  <ThemedText style={styles.feedbackText}>
-                    {patientFeedback}
-                  </ThemedText>
-                ) : null}
-                {patientError ? (
-                  <ThemedText style={styles.errorText}>
-                    {patientError}
-                  </ThemedText>
-                ) : null}
-                <Pressable
-                  style={styles.secondaryAction}
-                  onPress={handleCreatePatient}
-                >
-                  <ThemedText style={styles.secondaryActionText}>
-                    新增病人
-                  </ThemedText>
-                </Pressable>
+                <AddPatientForm onConfirm={handleCreatePatient} />
               </View>
-            </View>
+            </SectionCard>
 
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                邀請照顧者
-              </ThemedText>
+            <SectionCard title="邀請照顧者/病人">
               <View style={styles.inviteCard}>
-                <FieldPicker<string>
-                  label="病人"
-                  value={selectedPatientId}
-                  options={patientOptions}
-                  placeholder="請選擇病人"
-                  onValueChange={(value) =>
-                    setSelectedPatientId(value)
-                  }
-                  disabled={patientOptions.length === 0}
-                />
-                <FieldInput
-                  label="照顧者 Email"
-                  value={inviteEmail}
-                  onChangeText={setInviteEmail}
-                  placeholder="name@example.com"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-                <FieldPicker<PermissionLevel>
-                  label="權限"
-                  value={invitePermission}
-                  options={PERMISSION_OPTIONS}
-                  onValueChange={(value) =>
-                    setInvitePermission(value)
-                  }
-                />
-                {inviteFeedback ? (
-                  <ThemedText style={styles.feedbackText}>
-                    {inviteFeedback}
-                  </ThemedText>
-                ) : null}
-                {inviteError ? (
-                  <ThemedText style={styles.errorText}>
-                    {inviteError}
-                  </ThemedText>
-                ) : null}
-                <Pressable
-                  style={styles.primaryAction}
-                  onPress={handleInvite}
-                >
-                  <ThemedText style={styles.primaryActionText}>
-                    送出邀請
-                  </ThemedText>
-                </Pressable>
+                <InviteForm onConfirm={handleInvite} />
               </View>
-            </View>
+            </SectionCard>
 
-            {invites.length > 0 ? (
-              <View style={styles.section}>
-                <ThemedText style={styles.sectionTitle}>
-                  待接受邀請
-                </ThemedText>
+            {inviteInfo.list.length > 0 ? (
+              <SectionCard title="待接受邀請">
                 <View style={styles.listCard}>
-                  {invites.map((invite, index) => (
+                  {inviteInfo.list.map((invite, index) => (
                     <InviteCard
-                      key={invite.relationshipId}
+                      key={invite.id}
                       invite={invite}
-                      isLast={index === invites.length - 1}
+                      isLast={index === inviteInfo.list.length - 1}
                     />
                   ))}
                 </View>
-              </View>
+              </SectionCard>
             ) : null}
 
-            <View style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>
-                病人與照顧者
-              </ThemedText>
-              {patients.map((patient) => (
-                <PatientCard
-                  key={patient.patientId}
-                  patient={patient}
-                  onPermissionChange={(relationShipId, value) =>
-                    handleUpdatePermission(relationShipId, value)
+            <SectionCard title="病人與照顧者">
+              {relationsInfo.list.map((relationship) => (
+                <RelationShipCard
+                  userRole={
+                    currentUser?.patient_id ===
+                    relationship.patient_id
+                      ? Role.Patient
+                      : Role.CareGiver
                   }
-                  onCaregiverRemove={(relationShipId) =>
-                    handleRemoveCaregiver(relationShipId)
-                  }
+                  key={relationship.id}
+                  relationship={relationship}
+                  onPermissionChange={() => {
+                    // handleUpdatePermission(relationship.id, value);
+                  }}
+                  onCaregiverRemove={() => {
+                    // handleRemoveCaregiver(relationship.id)
+                  }}
                 />
               ))}
-            </View>
+            </SectionCard>
           </Container>
         </ScrollView>
         <Header>
@@ -467,14 +302,6 @@ const styles = StyleSheet.create({
   summaryLabel: {
     color: "#64748B",
     fontWeight: "600",
-  },
-  section: {
-    gap: 12,
-  },
-  sectionTitle: {
-    color: "#0F172A",
-    fontSize: 16,
-    fontWeight: "700",
   },
   inviteCard: {
     backgroundColor: "white",

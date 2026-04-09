@@ -12,6 +12,7 @@ const PublicLayout = () => {
   const hasInitializedAuth = useUserStore(
     (state) => state.hasInitializedAuth,
   );
+  const currentUser = useUserStore((state) => state.currentUser);
   const isAuthenticated = useUserStore((state) =>
     state.isAuthenticated(),
   );
@@ -24,7 +25,7 @@ const PublicLayout = () => {
     return <FullScreenLoading visible text="Checking session..." />;
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated && currentUser) {
     return <Redirect href={routes.protected.home} />;
   }
 

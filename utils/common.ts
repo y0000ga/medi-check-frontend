@@ -3,6 +3,7 @@ import {
   MEDICATION_DOSAGE_FORM,
 } from "@/constants/medication";
 import { IRES_Medication } from "@/types/api";
+import { PermissionLevel } from "@/types/api/care-invitation";
 import { DosageForm } from "@/types/common";
 import { IEvent } from "@/types/schedule";
 import dayjs from "dayjs";
@@ -96,4 +97,16 @@ export const evaluateLabel = ({
       dosageForm: medicationDosageForm,
     }),
   };
+};
+
+export const createEnumOptions = <T extends Record<string, string>>(
+  enumObj: T,
+  label: Record<T[keyof T], string>,
+) => {
+  const values = Object.values(enumObj) as T[keyof T][];
+
+  return values.map((value) => ({
+    value,
+    label: label[value],
+  }));
 };

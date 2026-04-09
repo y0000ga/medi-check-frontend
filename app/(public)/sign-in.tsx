@@ -32,7 +32,7 @@ const SignInScreen = () => {
     setError("");
     try {
       await login({ email, password });
-      router.replace(routes.protected.home);
+      // router.replace(routes.protected.home);
     } catch (err) {
       if (err instanceof ApiRequestError) {
         console.log("sign-in error:", err.raw);

@@ -1,5 +1,4 @@
 import { Pressable, StyleSheet, View } from "react-native";
-import { useEffect } from "react";
 import { router } from "expo-router";
 
 import Container from "@/components/ui/container";
@@ -13,16 +12,7 @@ import { routes } from "@/constants/route";
 
 const SecurityModal = () => {
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
   const loading = useUserStore((state) => state.isLoading.length > 0);
-
-  useEffect(() => {
-    if (!currentUser) {
-      loadCurrentUser();
-    }
-  }, [currentUser, loadCurrentUser]);
 
   return (
     <>

@@ -1,94 +1,71 @@
-import { CareManagementPatient } from "@/libs/api/patient";
 import { StyleSheet } from "react-native";
 import { ThemedView } from "../themed-view";
 import { ThemedText } from "../themed-text";
-import { PermissionLevel } from "@/types/care";
-import CaregiverCard, { EmptyCaregiverCard } from "./CaregiverCard";
+import { ICareRelationship } from "@/types/api/care-relationship";
+import { PermissionLevel, Role } from "@/types/api/care-invitation";
+import { ROLE_LABEL } from "@/constants/care";
 
 interface IProps {
-  patient: CareManagementPatient;
-  onPermissionChange: (
-    relationShipId: string,
-    value: PermissionLevel,
-  ) => void;
-  onCaregiverRemove: (relationShipId: string) => void;
+  userRole: Role;
+  relationship: ICareRelationship;
+  onPermissionChange: () => void;
+  onCaregiverRemove: () => void;
 }
 
-const PatientCard = ({
-  patient,
+const RelationShipCard = ({
+  userRole,
+  relationship,
   onPermissionChange,
   onCaregiverRemove,
 }: IProps) => {
   return (
-    <ThemedView
-      key={patient.patientId}
-      style={styles.patientCard}
-    >
+    <ThemedView style={styles.patientCard}>
       <ThemedView style={styles.patientHeader}>
         <ThemedView style={styles.patientMeta}>
           <ThemedText
             type="subtitle"
             style={styles.patientName}
           >
-            {patient.patientName}
+            {userRole === Role.Patient && relationship.caregiver_name}
+            {userRole === Role.CareGiver && relationship.patient_name}
           </ThemedText>
           <ThemedText style={styles.patientSubtitle}>
-            {patient.ownerName
-              ? `病人帳號：${patient.ownerName}${patient.ownerEmail ? ` ・ ${patient.ownerEmail}` : ""}`
-              : "沒有綁定登入帳號的病人資料"}
+            我的
+            {
+              ROLE_LABEL[
+                userRole === Role.CareGiver
+                  ? Role.Patient
+                  : Role.CareGiver
+              ]
+            }
           </ThemedText>
-          {patient.patientNote ? (
-            <ThemedText style={styles.patientNote}>
-              {patient.patientNote}
-            </ThemedText>
-          ) : null}
         </ThemedView>
         <ThemedView
           style={[
             styles.permissionChip,
-            patient.canManage && styles.permissionChipActive,
+            relationship.permission_level === PermissionLevel.Write &&
+              styles.permissionChipActive,
           ]}
         >
           <ThemedText
             style={[
               styles.permissionChipText,
-              patient.canManage && styles.permissionChipTextActive,
+              relationship.permission_level ===
+                PermissionLevel.Write &&
+                styles.permissionChipTextActive,
             ]}
           >
-            {patient.canManage ? "你可管理" : "僅可查看"}
+            {relationship.permission_level === PermissionLevel.Write
+              ? "可編輯"
+              : "僅可查看"}
           </ThemedText>
-        </ThemedView>
-      </ThemedView>
-
-      <ThemedView style={styles.caregiverSection}>
-        <ThemedText style={styles.caregiverSectionTitle}>
-          目前照顧者
-        </ThemedText>
-        <ThemedView style={styles.caregiverList}>
-          {patient.caregivers.length > 0 ? (
-            patient.caregivers.map((caregiver) => (
-              <CaregiverCard
-                key={caregiver.caregiverUserId}
-                caregiver={caregiver}
-                canManage={patient.canManage}
-                onPermissionChange={(value) =>
-                  onPermissionChange(caregiver.relationshipId, value)
-                }
-                onCaregiverRemove={() =>
-                  onCaregiverRemove(caregiver.relationshipId)
-                }
-              />
-            ))
-          ) : (
-            <EmptyCaregiverCard />
-          )}
         </ThemedView>
       </ThemedView>
     </ThemedView>
   );
 };
 
-export default PatientCard;
+export default RelationShipCard;
 
 const styles = StyleSheet.create({
   patientCard: {
