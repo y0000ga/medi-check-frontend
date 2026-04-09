@@ -3,15 +3,20 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 
 import FieldInput from "@/components/ui/field-input";
+import { routes } from "@/constants/route";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useUserStore } from "@/stores/user";
 
-export default function ForgotPasswordScreen() {
+const ForgotPasswordScreen = () => {
   const router = useRouter();
-  const requestPasswordReset = useUserStore((state) => state.requestPasswordReset);
-  const authLoading = useUserStore((state) => state.isLoading.length > 0);
+  const requestPasswordReset = useUserStore(
+    (state) => state.requestPasswordReset,
+  );
+  const authLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -25,9 +30,11 @@ export default function ForgotPasswordScreen() {
     setError("");
     try {
       await requestPasswordReset({ email });
-      router.push({ pathname: "/reset-password", params: { email } });
+      router.push(routes.public.resetPasswordWithEmail(email));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "送出失敗，請稍後再試。");
+      setError(
+        err instanceof Error ? err.message : "送出失敗，請稍後再試。",
+      );
     }
   };
 
@@ -38,11 +45,15 @@ export default function ForgotPasswordScreen() {
         <View style={styles.content}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
+              <ThemedText
+                type="subtitle"
+                style={styles.cardTitle}
+              >
                 忘記密碼
               </ThemedText>
               <ThemedText style={styles.cardDescription}>
-                輸入註冊 Email，先模擬寄送重設流程，下一步會帶你到重設密碼頁。
+                輸入註冊
+                Email，先模擬寄送重設流程，下一步會帶你到重設密碼頁。
               </ThemedText>
             </View>
 
@@ -56,21 +67,41 @@ export default function ForgotPasswordScreen() {
               autoCorrect={false}
             />
 
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {error ? (
+              <ThemedText style={styles.errorText}>
+                {error}
+              </ThemedText>
+            ) : null}
 
-            <Pressable style={[styles.primaryButton, authLoading && styles.buttonDisabled]} onPress={handleSubmit} disabled={authLoading}>
-              <ThemedText style={styles.primaryButtonText}>送出重設申請</ThemedText>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                authLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={authLoading}
+            >
+              <ThemedText style={styles.primaryButtonText}>
+                送出重設申請
+              </ThemedText>
             </Pressable>
 
-            <Pressable style={styles.bottomAction} onPress={() => router.push("/sign-in")}>
-              <ThemedText style={styles.bottomActionText}>返回登入</ThemedText>
+            <Pressable
+              style={styles.bottomAction}
+              onPress={() => router.push(routes.public.signIn)}
+            >
+              <ThemedText style={styles.bottomActionText}>
+                返回登入
+              </ThemedText>
             </Pressable>
           </View>
         </View>
       </ThemedView>
     </>
   );
-}
+};
+
+export default ForgotPasswordScreen;
 
 const styles = StyleSheet.create({
   screen: {

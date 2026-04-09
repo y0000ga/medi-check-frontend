@@ -1,20 +1,20 @@
-import dayjs from 'dayjs';
+import dayjs from "dayjs";
 
-import { RES_SCHEDULES } from '@/constants/mock';
-import { IDB_Schedule } from '@/types/db';
-import { scheduleMatchesDate } from '@/utils/schedule';
+import { RES_SCHEDULES } from "@/constants/mock";
+import { IDB_Schedule } from "@/types/db";
+import { scheduleMatchesDate } from "@/utils/schedule";
 
-import { request } from './client';
+import { request } from "./client";
 
 let mockSchedules = [...RES_SCHEDULES];
 
-export async function fetchSchedules({
+export const fetchSchedules = async ({
   patientId,
   date,
 }: {
   patientId?: string;
   date?: string;
-} = {}) {
+} = {}) => {
   // return request<IDB_Schedule[]>(`/schedules?patientId=${patientId ?? ''}&date=${date ?? ''}`);
   const targetDate = date ? dayjs(date) : null;
 
@@ -29,14 +29,16 @@ export async function fetchSchedules({
 
     return true;
   });
-}
+};
 
-export async function fetchScheduleDetail(id: string) {
+export const fetchScheduleDetail = async (id: string) => {
   // return request<IDB_Schedule>(`/schedules/${id}`);
   return mockSchedules.find((item) => item.id === id);
-}
+};
 
-export async function createSchedule(payload: Omit<IDB_Schedule, 'id'>) {
+export const createSchedule = async (
+  payload: Omit<IDB_Schedule, "id">,
+) => {
   // return request<IDB_Schedule>('/schedules', {
   //   method: 'POST',
   //   body: JSON.stringify(payload),
@@ -50,18 +52,23 @@ export async function createSchedule(payload: Omit<IDB_Schedule, 'id'>) {
   mockSchedules = [...mockSchedules, createdSchedule];
 
   return createdSchedule;
-}
+};
 
-export async function updateSchedule(id: string, payload: Partial<IDB_Schedule>) {
+export const updateSchedule = async (
+  id: string,
+  payload: Partial<IDB_Schedule>,
+) => {
   // return request<IDB_Schedule>(`/schedules/${id}`, {
   //   method: 'PUT',
   //   body: JSON.stringify(payload),
   // });
 
-  const existingSchedule = mockSchedules.find((item) => item.id === id);
+  const existingSchedule = mockSchedules.find(
+    (item) => item.id === id,
+  );
 
   if (!existingSchedule) {
-    throw new Error('Schedule not found');
+    throw new Error("Schedule not found");
   }
 
   const updatedSchedule: IDB_Schedule = {
@@ -70,15 +77,17 @@ export async function updateSchedule(id: string, payload: Partial<IDB_Schedule>)
     id,
   };
 
-  mockSchedules = mockSchedules.map((item) => item.id === id ? updatedSchedule : item);
+  mockSchedules = mockSchedules.map((item) =>
+    item.id === id ? updatedSchedule : item,
+  );
 
   return updatedSchedule;
-}
+};
 
-export async function deleteSchedule(id: string) {
+export const deleteSchedule = async (id: string) => {
   // return request<{ success: boolean }>(`/schedules/${id}`, {
   //   method: 'DELETE',
   // });
 
   mockSchedules = mockSchedules.filter((item) => item.id !== id);
-}
+};

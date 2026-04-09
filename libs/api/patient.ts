@@ -19,8 +19,11 @@ import {
 type MockCareRelationship = IRES_CareRelationship;
 type MockPatient = IRES_Patient;
 
-let mockPatients: MockPatient[] = DB_PATIENTS.map((item) => ({ ...item }));
-let mockCareRelationships: MockCareRelationship[] = DB_CARE_RELATIONSHIPS.map((item) => ({ ...item }));
+let mockPatients: MockPatient[] = DB_PATIENTS.map((item) => ({
+  ...item,
+}));
+let mockCareRelationships: MockCareRelationship[] =
+  DB_CARE_RELATIONSHIPS.map((item) => ({ ...item }));
 
 const buildCarePatientSummaries = (): IRES_CarePatientSummary[] =>
   mockCareRelationships
@@ -29,7 +32,9 @@ const buildCarePatientSummaries = (): IRES_CarePatientSummary[] =>
         return null;
       }
 
-      const patient = mockPatients.find((item) => item.id === relationship.patientId);
+      const patient = mockPatients.find(
+        (item) => item.id === relationship.patientId,
+      );
 
       if (!patient) {
         return null;
@@ -52,20 +57,30 @@ const buildCarePatientSummaries = (): IRES_CarePatientSummary[] =>
 
 const getPatientOwner = (patientId: string) => {
   const patient = mockPatients.find((item) => item.id === patientId);
-  return patient?.ownerUserId ? RES_USERS.find((item) => item.id === patient.ownerUserId) ?? null : null;
+  return patient?.ownerUserId
+    ? (RES_USERS.find((item) => item.id === patient.ownerUserId) ??
+        null)
+    : null;
 };
 
-export async function fetchOwnedPatient(userId: string) {
+export const fetchOwnedPatient = async (userId: string) => {
   return mockPatients.find((item) => item.ownerUserId === userId);
-}
+};
 
-export async function fetchCarePatients(caregiverUserId: string) {
+export const fetchCarePatients = async (
+  caregiverUserId: string,
+) => {
   return buildCarePatientSummaries().filter(
-    (item) => item.caregiverUserId === caregiverUserId && item.relationshipStatus === "active"
+    (item) =>
+      item.caregiverUserId === caregiverUserId &&
+      item.relationshipStatus === "active",
   );
-}
+};
 
-export async function fetchCarePatientDetail(patientId: string, caregiverUserId?: string) {
+export const fetchCarePatientDetail = async (
+  patientId: string,
+  caregiverUserId?: string,
+) => {
   const patient = mockPatients.find((item) => item.id === patientId);
 
   if (!patient) {
@@ -80,38 +95,63 @@ export async function fetchCarePatientDetail(patientId: string, caregiverUserId?
     (item) =>
       item.patientId === patientId &&
       item.caregiverUserId === caregiverUserId &&
-      item.status === "active"
+      item.status === "active",
   );
 
-  return relationship || patient.ownerUserId === caregiverUserId ? patient : undefined;
-}
+  return relationship || patient.ownerUserId === caregiverUserId
+    ? patient
+    : undefined;
+};
 
-export async function fetchPatientHistories(patientId: string, date?: string) {
+export const fetchPatientHistories = async (
+  patientId: string,
+  date?: string,
+) => {
   const targetDate = date ? dayjs(date) : dayjs();
   return deriveHistoriesByDateForPatient(patientId, targetDate);
-}
+};
 
-export async function fetchPatientTodayEvents(patientId: string, date?: string) {
+export const fetchPatientTodayEvents = async (
+  patientId: string,
+  date?: string,
+) => {
   const targetDate = date ? dayjs(date) : dayjs();
   return deriveEventsByDateForPatient(patientId, targetDate);
-}
+};
 
-export async function fetchCaregiverHistoryFeed(caregiverUserId: string, date?: string) {
+export const fetchCaregiverHistoryFeed = async (
+  caregiverUserId: string,
+  date?: string,
+) => {
   const targetDate = date ? dayjs(date) : dayjs();
   const patientIds = mockCareRelationships
-    .filter((item) => item.caregiverUserId === caregiverUserId && item.status === "active")
+    .filter(
+      (item) =>
+        item.caregiverUserId === caregiverUserId &&
+        item.status === "active",
+    )
     .map((item) => item.patientId);
 
   return patientIds
     .flatMap((patientId) =>
-      deriveHistoriesByDateForPatient(patientId, targetDate).map((history) => ({
-        patientId,
-        patientName: DB_PATIENTS.find((item) => item.id === patientId)?.name ?? "Unknown Patient",
-        history,
-      }))
+      deriveHistoriesByDateForPatient(patientId, targetDate).map(
+        (history) => ({
+          patientId,
+          patientName:
+            DB_PATIENTS.find((item) => item.id === patientId)?.name ??
+            "Unknown Patient",
+          history,
+        }),
+      ),
     )
-    .sort((a, b) => (dayjs(a.history.scheduledTime).isBefore(dayjs(b.history.scheduledTime)) ? 1 : -1));
-}
+    .sort((a, b) =>
+      dayjs(a.history.scheduledTime).isBefore(
+        dayjs(b.history.scheduledTime),
+      )
+        ? 1
+        : -1,
+    );
+};
 
 export interface CareTeamMember {
   relationshipId: string;
@@ -136,7 +176,9 @@ export interface CareManagementPatient {
   caregivers: CareTeamMember[];
 }
 
-export async function fetchCareManagementPatients(userId: string) {
+export const fetchCareManagementPatients = async (
+  userId: string,
+) => {
   const accessiblePatients = mockPatients.filter((patient) => {
     if (patient.ownerUserId === userId) {
       return true;
@@ -146,7 +188,7 @@ export async function fetchCareManagementPatients(userId: string) {
       (relationship) =>
         relationship.patientId === patient.id &&
         relationship.caregiverUserId === userId &&
-        relationship.status === "active"
+        relationship.status === "active",
     );
   });
 
@@ -157,14 +199,15 @@ export async function fetchCareManagementPatients(userId: string) {
         (relationship) =>
           relationship.patientId === patient.id &&
           relationship.status !== "revoked" &&
-          relationship.caregiverUserId !== patient.ownerUserId
+          relationship.caregiverUserId !== patient.ownerUserId,
       )
       .map<CareTeamMember | null>((relationship) => {
         if (!relationship.caregiverUserId) {
           return {
             relationshipId: relationship.id,
             caregiverUserId: "",
-            caregiverName: relationship.inviteeEmail ?? "Pending invitation",
+            caregiverName:
+              relationship.inviteeEmail ?? "Pending invitation",
             caregiverEmail: relationship.inviteeEmail ?? "",
             caregiverAvatarUrl: null,
             permissionLevel: relationship.permissionLevel,
@@ -173,7 +216,9 @@ export async function fetchCareManagementPatients(userId: string) {
           };
         }
 
-        const caregiver = RES_USERS.find((item) => item.id === relationship.caregiverUserId);
+        const caregiver = RES_USERS.find(
+          (item) => item.id === relationship.caregiverUserId,
+        );
 
         if (!caregiver) {
           return null;
@@ -196,7 +241,7 @@ export async function fetchCareManagementPatients(userId: string) {
       (relationship) =>
         relationship.patientId === patient.id &&
         relationship.caregiverUserId === userId &&
-        relationship.status === "active"
+        relationship.status === "active",
     );
 
     return {
@@ -207,17 +252,27 @@ export async function fetchCareManagementPatients(userId: string) {
       ownerUserId: patient.ownerUserId,
       ownerName: owner?.name ?? null,
       ownerEmail: owner?.email ?? null,
-      canManage: patient.ownerUserId === userId || currentRelationship?.permissionLevel === "admin",
+      canManage:
+        patient.ownerUserId === userId ||
+        currentRelationship?.permissionLevel === "admin",
       caregivers,
     };
   });
-}
+};
 
-export async function fetchIncomingCareInvitations(userId: string) {
+export const fetchIncomingCareInvitations = async (
+  userId: string,
+) => {
   return mockCareRelationships
-    .filter((relationship) => relationship.caregiverUserId === userId && relationship.status === "invited")
+    .filter(
+      (relationship) =>
+        relationship.caregiverUserId === userId &&
+        relationship.status === "invited",
+    )
     .map((relationship) => {
-      const patient = mockPatients.find((item) => item.id === relationship.patientId);
+      const patient = mockPatients.find(
+        (item) => item.id === relationship.patientId,
+      );
 
       return {
         relationshipId: relationship.id,
@@ -229,36 +284,45 @@ export async function fetchIncomingCareInvitations(userId: string) {
         invitedByUserId: relationship.invitedByUserId,
       };
     });
-}
+};
 
-export async function inviteCaregiver(payload: {
+export const inviteCaregiver = async (payload: {
   patientId: string;
   caregiverEmail: string;
   permissionLevel: PermissionLevel;
   invitedByUserId?: string | null;
-}) {
-  const patient = mockPatients.find((item) => item.id === payload.patientId);
+}) => {
+  const patient = mockPatients.find(
+    (item) => item.id === payload.patientId,
+  );
   if (!patient) {
     throw new Error("Patient not found");
   }
 
   const normalizedEmail = payload.caregiverEmail.trim().toLowerCase();
-  const caregiver = RES_USERS.find((item) => item.email.toLowerCase() === normalizedEmail);
+  const caregiver = RES_USERS.find(
+    (item) => item.email.toLowerCase() === normalizedEmail,
+  );
 
   if (caregiver && patient.ownerUserId === caregiver.id) {
-    throw new Error("Patient owner does not need an extra caregiver relationship");
+    throw new Error(
+      "Patient owner does not need an extra caregiver relationship",
+    );
   }
 
   const existed = mockCareRelationships.find(
     (item) =>
       item.patientId === payload.patientId &&
-      (((caregiver && item.caregiverUserId === caregiver.id) || false) ||
+      ((caregiver && item.caregiverUserId === caregiver.id) ||
+        false ||
         item.inviteeEmail?.toLowerCase() === normalizedEmail) &&
-      item.status !== "revoked"
+      item.status !== "revoked",
   );
 
   if (existed) {
-    throw new Error("This caregiver has already been linked or invited");
+    throw new Error(
+      "This caregiver has already been linked or invited",
+    );
   }
 
   const relationship: MockCareRelationship = {
@@ -277,14 +341,14 @@ export async function inviteCaregiver(payload: {
 
   mockCareRelationships = [...mockCareRelationships, relationship];
   return relationship;
-}
+};
 
-export async function createCarePatient(payload: {
+export const createCarePatient = async (payload: {
   creatorUserId: string;
   patientName: string;
   birthDate?: string | null;
   note?: string | null;
-}) {
+}) => {
   const normalizedName = payload.patientName.trim();
 
   if (!normalizedName) {
@@ -341,13 +405,15 @@ export async function createCarePatient(payload: {
     patient,
     relationship,
   };
-}
+};
 
-export async function updateCaregiverPermission(
+export const updateCaregiverPermission = async (
   relationshipId: string,
-  permissionLevel: PermissionLevel
-) {
-  const relationship = mockCareRelationships.find((item) => item.id === relationshipId);
+  permissionLevel: PermissionLevel,
+) => {
+  const relationship = mockCareRelationships.find(
+    (item) => item.id === relationshipId,
+  );
   if (!relationship) {
     throw new Error("Care relationship not found");
   }
@@ -359,14 +425,16 @@ export async function updateCaregiverPermission(
   };
 
   mockCareRelationships = mockCareRelationships.map((item) =>
-    item.id === relationshipId ? updated : item
+    item.id === relationshipId ? updated : item,
   );
 
   return updated;
-}
+};
 
-export async function removeCaregiver(relationshipId: string) {
-  const relationship = mockCareRelationships.find((item) => item.id === relationshipId);
+export const removeCaregiver = async (relationshipId: string) => {
+  const relationship = mockCareRelationships.find(
+    (item) => item.id === relationshipId,
+  );
   if (!relationship) {
     throw new Error("Care relationship not found");
   }
@@ -379,11 +447,11 @@ export async function removeCaregiver(relationshipId: string) {
           revokedAt: dayjs().toISOString(),
           updatedAt: dayjs().toISOString(),
         }
-      : item
+      : item,
   );
 
   return { success: true };
-}
+};
 
 export type CarePatientDetail = IRES_Patient | undefined;
 export type CarePatientSummary = IRES_CarePatientSummary;

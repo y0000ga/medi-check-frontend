@@ -13,4 +13,3 @@ export type EditableHistoryValues = {
   customSymptomTagsText: string;
   symptomTags: string[];
 };
-

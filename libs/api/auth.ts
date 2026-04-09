@@ -1,14 +1,10 @@
-import dayjs from "dayjs";
-
-import { RES_USERS } from "@/constants/mock";
 import { IRES_User } from "@/types/api";
 
 import { request } from "./client";
 
 export interface AuthSession {
-  access_token: string;
-  refresh_token: string;
-  user_id: string;
+  accessToken: string;
+  userId: string;
 }
 
 export interface SignInPayload {
@@ -37,8 +33,15 @@ export interface UpdateProfilePayload {
   avatarUrl?: string | null;
 }
 
-let mockUsers = [...RES_USERS];
-let currentUserId: string | null = RES_USERS[0]?.id ?? null;
+interface ApiUserResponse {
+  id: string;
+  email: string;
+  name: string;
+  avatar_url: string | null;
+  // TODO: 目前暫不針對 email 是否認證進行處理
+  is_email_verified: boolean;
+  status: IRES_User["status"];
+}
 
 export const DEMO_ACCOUNT = {
   email: "demo@medicheck.app",
@@ -46,19 +49,34 @@ export const DEMO_ACCOUNT = {
 } as const;
 
 export const signIn = (payload: SignInPayload) =>
-  request<AuthSession>("/auth/sign-in", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  })
+  request<{ access_token: string; user_id: string }>(
+    "/auth/sign-in",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  ).then((session) => ({
+    accessToken: session.access_token,
+    userId: session.user_id,
+  }));
+
+interface ISignUpResonse {
+  access_token: string;
+  user_id: string;
+}
 
 export const signUp = async (payload: SignUpPayload) =>
-  request<AuthSession>("/auth/sign-up", {
+  request<ISignUpResonse>("/auth/sign-up", {
     method: "POST",
     body: JSON.stringify(payload),
-  })
+  }).then((session) => ({
+    accessToken: session.access_token,
+    userId: session.user_id,
+  }));
 
-
-export async function forgotPassword(payload: ForgotPasswordPayload) {
+export const forgotPassword = async (
+  payload: ForgotPasswordPayload,
+) => {
   // return request<{ success: boolean }>(`/auth/forgot-password`, {
   //   method: "POST",
   //   body: JSON.stringify(payload),
@@ -67,9 +85,11 @@ export async function forgotPassword(payload: ForgotPasswordPayload) {
     success: true,
     email: payload.email.trim().toLowerCase(),
   };
-}
+};
 
-export async function resetPassword(payload: ResetPasswordPayload) {
+export const resetPassword = async (
+  payload: ResetPasswordPayload,
+) => {
   // return request<{ success: boolean }>("/auth/reset-password", {
   //   method: "POST",
   //   body: JSON.stringify(payload),
@@ -79,43 +99,41 @@ export async function resetPassword(payload: ResetPasswordPayload) {
   }
 
   return { success: true };
-}
+};
 
-export async function getMe() {
-  // return request<IRES_User>("/user/me");
-  const user = mockUsers.find((item) => item.id === currentUserId) ?? mockUsers[0];
+export const getMe = async () => {
+  const user = await request<ApiUserResponse>("/users/me");
+  return mapApiUser(user);
+};
 
-  if (!user) {
-    throw new Error("User not found");
-  }
+export const updateProfile = async (
+  payload: UpdateProfilePayload,
+) => {
+  await request<{ id: string }>("/users/me", {
+    method: "PATCH",
+    body: JSON.stringify({
+      name: payload.name,
+      avatar_url: payload.avatarUrl,
+    }),
+  });
 
-  return user;
-}
+  return getMe();
+};
 
-export async function updateProfile(payload: UpdateProfilePayload) {
-  // return request<IRES_User>("/user/me", {
-  //   method: "PATCH",
-  //   body: JSON.stringify(payload),
-  // });
-  const userIndex = mockUsers.findIndex((item) => item.id === currentUserId);
+export const signOut = () =>
+  request<null>("/auth/logout", {
+    method: "POST",
+  });
 
-  if (userIndex < 0) {
-    throw new Error("User not found");
-  }
-
-  const currentUser = mockUsers[userIndex];
-  const updatedUser: IRES_User = {
-    ...currentUser,
-    ...payload,
-    avatarUrl: payload.avatarUrl === undefined ? currentUser.avatarUrl : payload.avatarUrl,
-    name: payload.name ?? currentUser.name,
+export const mapApiUser = (
+  user: ApiUserResponse,
+): IRES_User => {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatar_url,
+    isEmailVerified: user.is_email_verified,
+    status: user.status,
   };
-
-  mockUsers = mockUsers.map((item, index) => (index === userIndex ? updatedUser : item));
-
-  return updatedUser;
-}
-
-export const signOut = () => request<{ success: boolean }>("/auth/sign-out", {
-  method: "POST",
-})
+};

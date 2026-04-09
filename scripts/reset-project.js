@@ -11,14 +11,20 @@ const path = require("path");
 const readline = require("readline");
 
 const root = process.cwd();
-const oldDirs = ["app", "components", "hooks", "constants", "scripts"];
+const oldDirs = [
+  "app",
+  "components",
+  "hooks",
+  "constants",
+  "scripts",
+];
 const exampleDir = "app-example";
 const newAppDir = "app";
 const exampleDirPath = path.join(root, exampleDir);
 
 const indexContent = `import { Text, View } from "react-native";
 
-export default function Index() {
+const Index = () => {
   return (
     <View
       style={{
@@ -30,14 +36,18 @@ export default function Index() {
       <Text>Edit app/index.tsx to edit this screen.</Text>
     </View>
   );
-}
+};
+
+export default Index;
 `;
 
 const layoutContent = `import { Stack } from "expo-router";
 
-export default function RootLayout() {
+const RootLayout = () => {
   return <Stack />;
-}
+};
+
+export default RootLayout;
 `;
 
 const rl = readline.createInterface({
@@ -62,7 +72,10 @@ const moveDirectories = async (userInput) => {
           await fs.promises.rename(oldDirPath, newDirPath);
           console.log(`➡️ /${dir} moved to /${exampleDir}/${dir}.`);
         } else {
-          await fs.promises.rm(oldDirPath, { recursive: true, force: true });
+          await fs.promises.rm(oldDirPath, {
+            recursive: true,
+            force: true,
+          });
           console.log(`❌ /${dir} deleted.`);
         }
       } else {
@@ -91,10 +104,12 @@ const moveDirectories = async (userInput) => {
         userInput === "y"
           ? `\n3. Delete the /${exampleDir} directory when you're done referencing it.`
           : ""
-      }`
+      }`,
     );
   } catch (error) {
-    console.error(`❌ Error during script execution: ${error.message}`);
+    console.error(
+      `❌ Error during script execution: ${error.message}`,
+    );
   }
 };
 
@@ -108,5 +123,5 @@ rl.question(
       console.log("❌ Invalid input. Please enter 'Y' or 'N'.");
       rl.close();
     }
-  }
+  },
 );

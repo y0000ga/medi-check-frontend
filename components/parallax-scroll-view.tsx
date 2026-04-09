@@ -1,11 +1,9 @@
-import type { PropsWithChildren, ReactElement } from 'react';
-import { StyleSheet } from 'react-native';
-import Animated, {
-  useAnimatedRef,
-} from 'react-native-reanimated';
+import type { PropsWithChildren, ReactElement } from "react";
+import { StyleSheet } from "react-native";
+import Animated, { useAnimatedRef } from "react-native-reanimated";
 
-import { ThemedView } from '@/components/themed-view';
-import { useThemeColor } from '@/hooks/use-theme-color';
+import { ThemedView } from "@/components/themed-view";
+import { useThemeColor } from "@/hooks/use-theme-color";
 
 const HEADER_HEIGHT = 250;
 
@@ -14,13 +12,9 @@ type Props = PropsWithChildren<{
   headerBackgroundColor?: { dark: string; light: string };
 }>;
 
-export default function ParallaxScrollView({
-  children,
-}: Props) {
-  const backgroundColor = useThemeColor({}, 'background');
+const ParallaxScrollView = ({ children }: Props) => {
+  const backgroundColor = useThemeColor({}, "background");
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
-
-
 
   return (
     <Animated.ScrollView
@@ -32,16 +26,18 @@ export default function ParallaxScrollView({
       <ThemedView style={styles.content}>{children}</ThemedView>
     </Animated.ScrollView>
   );
-}
+};
+
+export default ParallaxScrollView;
 
 const styles = StyleSheet.create({
   header: {
     height: HEADER_HEIGHT,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   content: {
     flex: 1,
-    overflow: 'hidden',
-    backgroundColor: '#F6FAFB'
+    overflow: "hidden",
+    backgroundColor: "#F6FAFB",
   },
 });

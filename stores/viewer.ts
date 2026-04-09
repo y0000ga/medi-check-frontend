@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
-import { fetchCarePatients, fetchOwnedPatient } from "@/libs/api/patient";
+import {
+  fetchCarePatients,
+  fetchOwnedPatient,
+} from "@/libs/api/patient";
 import { IRES_CarePatientSummary, IRES_Patient } from "@/types/api";
 
 export type ViewerMode = "self" | "caregiver";
@@ -50,8 +53,12 @@ export const useViewerStore = create<ViewerStore>()((set, get) => ({
 
         const nextSelectedPatientId =
           nextMode === "self"
-            ? ownPatient?.id ?? null
-            : state.selectedPatientId && carePatients.some((item) => item.patientId === state.selectedPatientId)
+            ? (ownPatient?.id ?? null)
+            : state.selectedPatientId &&
+                carePatients.some(
+                  (item) =>
+                    item.patientId === state.selectedPatientId,
+                )
               ? state.selectedPatientId
               : null;
 
@@ -67,7 +74,10 @@ export const useViewerStore = create<ViewerStore>()((set, get) => ({
     } catch (error) {
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : "Load viewer context failed",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Load viewer context failed",
       });
     }
   },
@@ -75,7 +85,10 @@ export const useViewerStore = create<ViewerStore>()((set, get) => ({
   setMode: (mode) =>
     set((state) => ({
       mode,
-      selectedPatientId: mode === "self" ? state.ownPatient?.id ?? null : state.selectedPatientId,
+      selectedPatientId:
+        mode === "self"
+          ? (state.ownPatient?.id ?? null)
+          : state.selectedPatientId,
     })),
 
   selectPatient: (patientId) => set({ selectedPatientId: patientId }),

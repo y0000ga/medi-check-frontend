@@ -15,41 +15,72 @@ import {
   type SignUpPayload,
   type UpdateProfilePayload,
 } from "@/libs/api/auth";
+import { setAccessToken } from "@/libs/api/client";
 import { IRES_User } from "@/types/api";
 
 interface UserStore {
   currentUser: IRES_User | null;
   accessToken: string | null;
-  refreshToken: string | null;
   isLoading: boolean[];
   error: string | null;
+  hasInitializedAuth: boolean;
 
   isAuthenticated: () => boolean;
   clearError: () => void;
   addLoading: () => void;
   removeLoading: () => void;
 
+  initializeAuth: () => Promise<void>;
   loadCurrentUser: () => Promise<IRES_User | null>;
   login: (payload: SignInPayload) => Promise<AuthSession>;
   register: (payload: SignUpPayload) => Promise<AuthSession>;
-  requestPasswordReset: (payload: ForgotPasswordPayload) => Promise<{ success: boolean; email: string }>;
-  confirmPasswordReset: (payload: ResetPasswordPayload) => Promise<{ success: boolean }>;
-  updateProfile: (payload: UpdateProfilePayload) => Promise<IRES_User>;
+  requestPasswordReset: (
+    payload: ForgotPasswordPayload,
+  ) => Promise<{ success: boolean; email: string }>;
+  confirmPasswordReset: (
+    payload: ResetPasswordPayload,
+  ) => Promise<{ success: boolean }>;
+  updateProfile: (
+    payload: UpdateProfilePayload,
+  ) => Promise<IRES_User>;
   logout: () => Promise<void>;
 }
 
 export const useUserStore = create<UserStore>()((set, get) => ({
   currentUser: null,
   accessToken: null,
-  refreshToken: null,
   isLoading: [],
   error: null,
+  hasInitializedAuth: false,
 
-  isAuthenticated: () => Boolean(get().currentUser && get().accessToken && get().refreshToken),
+  isAuthenticated: () => Boolean(get().accessToken),
   clearError: () => set({ error: null }),
-  addLoading: () => set((state) => ({ isLoading: [...state.isLoading, true] })),
+  addLoading: () =>
+    set((state) => ({ isLoading: [...state.isLoading, true] })),
   removeLoading: () =>
-    set((state) => ({ isLoading: state.isLoading.slice(0, Math.max(0, state.isLoading.length - 1)) })),
+    set((state) => ({
+      isLoading: state.isLoading.slice(
+        0,
+        Math.max(0, state.isLoading.length - 1),
+      ),
+    })),
+
+  initializeAuth: async () => {
+    const { accessToken, hasInitializedAuth } = get();
+
+    if (hasInitializedAuth) {
+      return;
+    }
+
+    if (!accessToken) {
+      set({ hasInitializedAuth: true });
+      return;
+    }
+
+    setAccessToken(accessToken);
+    await get().loadCurrentUser();
+    set({ hasInitializedAuth: true });
+  },
 
   loadCurrentUser: async () => {
     const { addLoading, removeLoading, clearError } = get();
@@ -61,10 +92,14 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       set({ currentUser: user });
       return user;
     } catch (error) {
+      setAccessToken(null);
       set({
         currentUser: null,
-        token: null,
-        error: error instanceof Error ? error.message : "Load current user failed",
+        accessToken: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Load current user failed",
       });
       return null;
     } finally {
@@ -79,14 +114,18 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       addLoading();
       clearError();
       const session = await signIn(payload);
+      setAccessToken(session.accessToken);
       set({
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
+        accessToken: session.accessToken,
+        hasInitializedAuth: true,
       });
+      await get().loadCurrentUser();
       return session;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Sign in failed";
-      set({ error: message });
+      setAccessToken(null);
+      const message =
+        error instanceof Error ? error.message : "Sign in failed";
+      set({ currentUser: null, accessToken: null, error: message });
       throw error;
     } finally {
       removeLoading();
@@ -100,14 +139,19 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       addLoading();
       clearError();
       const session = await signUp(payload);
+      console.log(session);
+      setAccessToken(session.accessToken);
       set({
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
+        accessToken: session.accessToken,
+        hasInitializedAuth: true,
       });
+      await get().loadCurrentUser();
       return session;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Sign up failed";
-      set({ error: message });
+      setAccessToken(null);
+      const message =
+        error instanceof Error ? error.message : "Sign up failed";
+      set({ currentUser: null, accessToken: null, error: message });
       throw error;
     } finally {
       removeLoading();
@@ -122,7 +166,10 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       clearError();
       return await forgotPassword(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Forgot password failed";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Forgot password failed";
       set({ error: message });
       throw error;
     } finally {
@@ -138,7 +185,10 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       clearError();
       return await resetPassword(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Reset password failed";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Reset password failed";
       set({ error: message });
       throw error;
     } finally {
@@ -156,7 +206,10 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       set({ currentUser: user });
       return user;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Update profile failed";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Update profile failed";
       set({ error: message });
       throw error;
     } finally {
@@ -171,12 +224,15 @@ export const useUserStore = create<UserStore>()((set, get) => ({
       addLoading();
       clearError();
       await signOut();
+      setAccessToken(null);
       set({
         currentUser: null,
-        token: null,
+        accessToken: null,
+        hasInitializedAuth: true,
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Sign out failed";
+      const message =
+        error instanceof Error ? error.message : "Sign out failed";
       set({ error: message });
       throw error;
     } finally {

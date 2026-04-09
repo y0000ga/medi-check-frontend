@@ -8,31 +8,47 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useViewerStore } from "@/stores/viewer";
 
-export default function ViewerModal() {
+const ViewerModal = () => {
   const mode = useViewerStore((state) => state.mode);
   const ownPatient = useViewerStore((state) => state.ownPatient);
   const carePatients = useViewerStore((state) => state.carePatients);
-  const selectedPatientId = useViewerStore((state) => state.selectedPatientId);
+  const selectedPatientId = useViewerStore(
+    (state) => state.selectedPatientId,
+  );
   const setMode = useViewerStore((state) => state.setMode);
-  const selectPatient = useViewerStore((state) => state.selectPatient);
-  const canUseCaregiverView = useViewerStore((state) => state.canUseCaregiverView());
+  const selectPatient = useViewerStore(
+    (state) => state.selectPatient,
+  );
+  const canUseCaregiverView = useViewerStore((state) =>
+    state.canUseCaregiverView(),
+  );
 
   return (
     <ThemedView style={styles.screen}>
       <ModalHeader title="檢視身分" />
       <Container>
         <View style={styles.card}>
-          <ThemedText style={styles.sectionTitle}>選擇視角</ThemedText>
+          <ThemedText style={styles.sectionTitle}>
+            選擇視角
+          </ThemedText>
           <ThemedText style={styles.subtitle}>
             切換接下來要查看的是自己的服藥資訊，或照顧對象的資料。
           </ThemedText>
 
           <View style={styles.modeRow}>
             <Pressable
-              style={[styles.modeButton, mode === "self" && styles.modeButtonActive]}
+              style={[
+                styles.modeButton,
+                mode === "self" && styles.modeButtonActive,
+              ]}
               onPress={() => setMode("self")}
             >
-              <ThemedText style={[styles.modeText, mode === "self" && styles.modeTextActive]}>
+              <ThemedText
+                style={[
+                  styles.modeText,
+                  mode === "self" && styles.modeTextActive,
+                ]}
+              >
                 我的服藥
               </ThemedText>
             </Pressable>
@@ -43,7 +59,9 @@ export default function ViewerModal() {
                 mode === "caregiver" && styles.modeButtonActive,
                 !canUseCaregiverView && styles.modeButtonDisabled,
               ]}
-              onPress={() => canUseCaregiverView && setMode("caregiver")}
+              onPress={() =>
+                canUseCaregiverView && setMode("caregiver")
+              }
               disabled={!canUseCaregiverView}
             >
               <ThemedText
@@ -60,7 +78,9 @@ export default function ViewerModal() {
 
           {mode === "self" ? (
             <View style={styles.summaryCard}>
-              <ThemedText style={styles.summaryTitle}>目前設定</ThemedText>
+              <ThemedText style={styles.summaryTitle}>
+                目前設定
+              </ThemedText>
               <ThemedText style={styles.summaryText}>
                 {ownPatient
                   ? "你現在會以自己的個人服藥視角查看首頁與歷史紀錄。"
@@ -69,16 +89,23 @@ export default function ViewerModal() {
             </View>
           ) : (
             <View style={styles.patientSection}>
-              <ThemedText style={styles.sectionLabel}>照顧對象</ThemedText>
+              <ThemedText style={styles.sectionLabel}>
+                照顧對象
+              </ThemedText>
 
               <Pressable
-                style={[styles.patientChip, selectedPatientId === null && styles.patientChipActive]}
+                style={[
+                  styles.patientChip,
+                  selectedPatientId === null &&
+                    styles.patientChipActive,
+                ]}
                 onPress={() => selectPatient(null)}
               >
                 <ThemedText
                   style={[
                     styles.patientChipText,
-                    selectedPatientId === null && styles.patientChipTextActive,
+                    selectedPatientId === null &&
+                      styles.patientChipTextActive,
                   ]}
                 >
                   全部病人
@@ -90,14 +117,16 @@ export default function ViewerModal() {
                   key={patient.patientId}
                   style={[
                     styles.patientChip,
-                    selectedPatientId === patient.patientId && styles.patientChipActive,
+                    selectedPatientId === patient.patientId &&
+                      styles.patientChipActive,
                   ]}
                   onPress={() => selectPatient(patient.patientId)}
                 >
                   <ThemedText
                     style={[
                       styles.patientChipText,
-                      selectedPatientId === patient.patientId && styles.patientChipTextActive,
+                      selectedPatientId === patient.patientId &&
+                        styles.patientChipTextActive,
                     ]}
                   >
                     {patient.patientName}
@@ -109,14 +138,21 @@ export default function ViewerModal() {
         </View>
 
         <Header>
-          <Pressable style={styles.doneButton} onPress={() => router.back()}>
-            <ThemedText style={styles.doneButtonText}>完成</ThemedText>
+          <Pressable
+            style={styles.doneButton}
+            onPress={() => router.back()}
+          >
+            <ThemedText style={styles.doneButtonText}>
+              完成
+            </ThemedText>
           </Pressable>
         </Header>
       </Container>
     </ThemedView>
   );
-}
+};
+
+export default ViewerModal;
 
 const styles = StyleSheet.create({
   screen: {

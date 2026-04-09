@@ -3,17 +3,22 @@ import { useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import FieldInput from "@/components/ui/field-input";
+import { routes } from "@/constants/route";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useUserStore } from "@/stores/user";
 
-export default function ResetPasswordScreen() {
+const ResetPasswordScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const email = typeof params.email === "string" ? params.email : "";
-  const confirmPasswordReset = useUserStore((state) => state.confirmPasswordReset);
-  const authLoading = useUserStore((state) => state.isLoading.length > 0);
+  const confirmPasswordReset = useUserStore(
+    (state) => state.confirmPasswordReset,
+  );
+  const authLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,9 +33,11 @@ export default function ResetPasswordScreen() {
     setError("");
     try {
       await confirmPasswordReset({ password, confirmPassword });
-      router.push("/sign-in");
+      router.push(routes.public.signIn);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "重設失敗，請稍後再試。");
+      setError(
+        err instanceof Error ? err.message : "重設失敗，請稍後再試。",
+      );
     }
   };
 
@@ -41,11 +48,16 @@ export default function ResetPasswordScreen() {
         <View style={styles.content}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
+              <ThemedText
+                type="subtitle"
+                style={styles.cardTitle}
+              >
                 重設密碼
               </ThemedText>
               <ThemedText style={styles.cardDescription}>
-                {email ? `正在重設 ${email} 的密碼。` : "設定新的登入密碼。"}
+                {email
+                  ? `正在重設 ${email} 的密碼。`
+                  : "設定新的登入密碼。"}
               </ThemedText>
             </View>
 
@@ -69,21 +81,41 @@ export default function ResetPasswordScreen() {
               autoCorrect={false}
             />
 
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {error ? (
+              <ThemedText style={styles.errorText}>
+                {error}
+              </ThemedText>
+            ) : null}
 
-            <Pressable style={[styles.primaryButton, authLoading && styles.buttonDisabled]} onPress={handleReset} disabled={authLoading}>
-              <ThemedText style={styles.primaryButtonText}>完成重設</ThemedText>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                authLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleReset}
+              disabled={authLoading}
+            >
+              <ThemedText style={styles.primaryButtonText}>
+                完成重設
+              </ThemedText>
             </Pressable>
 
-            <Pressable style={styles.bottomAction} onPress={() => router.push("/sign-in")}>
-              <ThemedText style={styles.bottomActionText}>返回登入</ThemedText>
+            <Pressable
+              style={styles.bottomAction}
+              onPress={() => router.back()}
+            >
+              <ThemedText style={styles.bottomActionText}>
+                取消
+              </ThemedText>
             </Pressable>
           </View>
         </View>
       </ThemedView>
     </>
   );
-}
+};
+
+export default ResetPasswordScreen;
 
 const styles = StyleSheet.create({
   screen: {

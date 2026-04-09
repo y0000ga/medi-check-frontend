@@ -12,9 +12,11 @@ import { ThemedView } from "@/components/themed-view";
 import { useUserStore } from "@/stores/user";
 import { USER_STATUS_LABEL } from "@/constants/user";
 
-export default function ProfileModal() {
+const ProfileModal = () => {
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore((state) => state.loadCurrentUser);
+  const loadCurrentUser = useUserStore(
+    (state) => state.loadCurrentUser,
+  );
   const updateProfile = useUserStore((state) => state.updateProfile);
   const loading = useUserStore((state) => state.isLoading.length > 0);
 
@@ -65,13 +67,20 @@ export default function ProfileModal() {
         <Container>
           <View style={styles.profileCard}>
             <View style={styles.avatar}>
-              <ThemedText style={styles.avatarText}>{initials}</ThemedText>
+              <ThemedText style={styles.avatarText}>
+                {initials}
+              </ThemedText>
             </View>
             <View style={styles.profileMeta}>
-              <ThemedText type="subtitle" style={styles.profileName}>
+              <ThemedText
+                type="subtitle"
+                style={styles.profileName}
+              >
                 {currentUser?.name ?? "未命名使用者"}
               </ThemedText>
-              <ThemedText style={styles.profileEmail}>{currentUser?.email ?? ""}</ThemedText>
+              <ThemedText style={styles.profileEmail}>
+                {currentUser?.email ?? ""}
+              </ThemedText>
             </View>
           </View>
 
@@ -93,32 +102,43 @@ export default function ProfileModal() {
             />
           </View>
 
-
-
           <View style={styles.infoCard}>
             <View style={styles.fieldRow}>
               <ThemedText style={styles.label}>Email</ThemedText>
-              <ThemedText style={styles.value}>{currentUser?.email ?? ""}</ThemedText>
+              <ThemedText style={styles.value}>
+                {currentUser?.email ?? ""}
+              </ThemedText>
             </View>
             <View style={styles.fieldRow}>
               <ThemedText style={styles.label}>帳號狀態</ThemedText>
               <ThemedText style={styles.value}>
-                {currentUser ? USER_STATUS_LABEL[currentUser.status] : ""}
+                {currentUser
+                  ? USER_STATUS_LABEL[currentUser.status]
+                  : ""}
               </ThemedText>
             </View>
           </View>
 
-          {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+          {error ? (
+            <ThemedText style={styles.errorText}>{error}</ThemedText>
+          ) : null}
         </Container>
         <Header>
-          <Pressable style={styles.primaryButton} onPress={handleSave}>
-            <ThemedText style={styles.primaryButtonText}>儲存變更</ThemedText>
+          <Pressable
+            style={styles.primaryButton}
+            onPress={handleSave}
+          >
+            <ThemedText style={styles.primaryButtonText}>
+              儲存變更
+            </ThemedText>
           </Pressable>
         </Header>
       </ThemedView>
     </>
   );
-}
+};
+
+export default ProfileModal;
 
 const styles = StyleSheet.create({
   screen: {

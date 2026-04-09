@@ -6,14 +6,18 @@ import Header from "@/components/ui/header";
 import FieldInput from "@/components/ui/field-input";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { routes } from "@/constants/route";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { ApiRequestError } from "@/libs/api/client";
 import { useUserStore } from "@/stores/user";
 
-export default function SignInScreen() {
+const SignInScreen = () => {
   const router = useRouter();
   const login = useUserStore((state) => state.login);
-  const authLoading = useUserStore((state) => state.isLoading.length > 0);
+  const authLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,9 +32,16 @@ export default function SignInScreen() {
     setError("");
     try {
       await login({ email, password });
-      router.replace("/(tabs)");
+      router.replace(routes.protected.home);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登入失敗，請稍後再試。");
+      if (err instanceof ApiRequestError) {
+        console.log("sign-in error:", err.raw);
+        setError(err.message);
+        return;
+      }
+      setError(
+        err instanceof Error ? err.message : "登入失敗，請稍後再試。",
+      );
     }
   };
 
@@ -41,10 +52,17 @@ export default function SignInScreen() {
         <Header>
           <View style={styles.brandRow}>
             <View style={styles.brandIconWrap}>
-              <IconSymbol name="local-hospital" size={26} color="#3C83F6" />
+              <IconSymbol
+                name="local-hospital"
+                size={26}
+                color="#3C83F6"
+              />
             </View>
             <View style={styles.brandTextWrap}>
-              <ThemedText type="title" style={styles.title}>
+              <ThemedText
+                type="title"
+                style={styles.title}
+              >
                 MediCheck
               </ThemedText>
             </View>
@@ -54,7 +72,10 @@ export default function SignInScreen() {
         <View style={styles.content}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
+              <ThemedText
+                type="subtitle"
+                style={styles.cardTitle}
+              >
                 帳號登入
               </ThemedText>
             </View>
@@ -79,25 +100,50 @@ export default function SignInScreen() {
               autoCorrect={false}
             />
 
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {error ? (
+              <ThemedText style={styles.errorText}>
+                {error}
+              </ThemedText>
+            ) : null}
 
-            <Pressable style={styles.inlineAction} onPress={() => router.push("/forgot-password")}>
-              <ThemedText style={styles.inlineActionText}>忘記密碼</ThemedText>
+            <Pressable
+              style={styles.inlineAction}
+              onPress={() => router.push(routes.public.forgotPassword)}
+            >
+              <ThemedText style={styles.inlineActionText}>
+                忘記密碼
+              </ThemedText>
             </Pressable>
 
-            <Pressable style={[styles.primaryButton, authLoading && styles.buttonDisabled]} onPress={handleSignIn} disabled={authLoading}>
-              <ThemedText style={styles.primaryButtonText}>登入</ThemedText>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                authLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleSignIn}
+              disabled={authLoading}
+            >
+              <ThemedText style={styles.primaryButtonText}>
+                登入
+              </ThemedText>
             </Pressable>
 
-            <Pressable style={styles.bottomAction} onPress={() => router.push("/sign-up")}>
-              <ThemedText style={styles.bottomActionText}>沒有帳號？前往註冊</ThemedText>
+            <Pressable
+              style={styles.bottomAction}
+              onPress={() => router.push(routes.public.signUp)}
+            >
+              <ThemedText style={styles.bottomActionText}>
+                沒有帳號？前往註冊
+              </ThemedText>
             </Pressable>
           </View>
         </View>
       </ThemedView>
     </>
   );
-}
+};
+
+export default SignInScreen;
 
 const styles = StyleSheet.create({
   screen: {

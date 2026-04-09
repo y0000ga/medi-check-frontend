@@ -13,12 +13,16 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { MEDICATION_DOSAGE_FORM } from "@/constants/medication";
-import { fetchCarePatients, fetchOwnedPatient } from "@/libs/api/patient";
+import {
+  fetchCarePatients,
+  fetchOwnedPatient,
+} from "@/libs/api/patient";
 import { useMedicationStore } from "@/stores/medication";
 import { useUserStore } from "@/stores/user";
 import { useViewerStore } from "@/stores/viewer";
 import { Action, DosageForm } from "@/types/common";
 import { IRES_Medication } from "@/types/api";
+import { routes } from "@/constants/route";
 
 const TITLE: Record<Action, string> = {
   [Action.Create]: "新增藥物",
@@ -46,24 +50,46 @@ const MedicationModal = () => {
   const { action, id } = params as { action: Action; id?: string };
 
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore((state) => state.loadCurrentUser);
-  const userLoading = useUserStore((state) => state.isLoading.length > 0);
+  const loadCurrentUser = useUserStore(
+    (state) => state.loadCurrentUser,
+  );
+  const userLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
   const viewerMode = useViewerStore((state) => state.mode);
-  const viewerOwnPatient = useViewerStore((state) => state.ownPatient);
-  const viewerSelectedPatientId = useViewerStore((state) => state.selectedPatientId);
+  const viewerOwnPatient = useViewerStore(
+    (state) => state.ownPatient,
+  );
+  const viewerSelectedPatientId = useViewerStore(
+    (state) => state.selectedPatientId,
+  );
 
-  const addMedication = useMedicationStore((state) => state.addMedication);
-  const editMedication = useMedicationStore((state) => state.editMedication);
-  const removeMedication = useMedicationStore((state) => state.removeMedication);
-  const loadMedicationDetail = useMedicationStore((state) => state.loadMedicationDetail);
-  const selectedMedication = useMedicationStore((state) => state.selectedMedication);
-  const medicationLoading = useMedicationStore((state) => state.isLoading.length > 0);
+  const addMedication = useMedicationStore(
+    (state) => state.addMedication,
+  );
+  const editMedication = useMedicationStore(
+    (state) => state.editMedication,
+  );
+  const removeMedication = useMedicationStore(
+    (state) => state.removeMedication,
+  );
+  const loadMedicationDetail = useMedicationStore(
+    (state) => state.loadMedicationDetail,
+  );
+  const selectedMedication = useMedicationStore(
+    (state) => state.selectedMedication,
+  );
+  const medicationLoading = useMedicationStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const [medication, setMedication] = useState<IRES_Medication>({
     ...EMPTY_MEDICATION,
     id: id ?? "",
   });
-  const [patientOptions, setPatientOptions] = useState<{ label: string; value: string }[]>([]);
+  const [patientOptions, setPatientOptions] = useState<
+    { label: string; value: string }[]
+  >([]);
   const [error, setError] = useState("");
 
   const isInfoMode = action === Action.Info;
@@ -97,7 +123,10 @@ const MedicationModal = () => {
           label: patient.patientName,
           value: patient.patientId,
         })),
-      ].filter((item): item is { label: string; value: string } => item !== null);
+      ].filter(
+        (item): item is { label: string; value: string } =>
+          item !== null,
+      );
 
       setPatientOptions(options);
       setMedication((current) => {
@@ -107,8 +136,11 @@ const MedicationModal = () => {
 
         const defaultPatientId =
           viewerMode === "caregiver"
-            ? viewerSelectedPatientId ?? options[0]?.value ?? ""
-            : viewerOwnPatient?.id ?? ownPatient?.id ?? options[0]?.value ?? "";
+            ? (viewerSelectedPatientId ?? options[0]?.value ?? "")
+            : (viewerOwnPatient?.id ??
+              ownPatient?.id ??
+              options[0]?.value ??
+              "");
 
         return {
           ...current,
@@ -122,7 +154,12 @@ const MedicationModal = () => {
     return () => {
       active = false;
     };
-  }, [currentUser, viewerMode, viewerOwnPatient?.id, viewerSelectedPatientId]);
+  }, [
+    currentUser,
+    viewerMode,
+    viewerOwnPatient?.id,
+    viewerSelectedPatientId,
+  ]);
 
   useEffect(() => {
     if (action === Action.Create || !id) {
@@ -141,7 +178,7 @@ const MedicationModal = () => {
   }, [id, selectedMedication]);
 
   if (action !== Action.Create && !id) {
-    return <Redirect href="/medication" />;
+    return <Redirect href={routes.protected.medication} />;
   }
 
   const handleSave = async () => {
@@ -164,7 +201,7 @@ const MedicationModal = () => {
         dosageForm: medication.dosageForm,
         memo: medication.memo,
       });
-      router.push("/medication");
+      router.push(routes.protected.medication);
       return;
     }
 
@@ -175,7 +212,7 @@ const MedicationModal = () => {
         dosageForm: medication.dosageForm,
         memo: medication.memo,
       });
-      router.push("/medication");
+      router.push(routes.protected.medication);
     }
   };
 
@@ -185,7 +222,7 @@ const MedicationModal = () => {
     }
 
     await removeMedication(id);
-    router.push("/medication");
+    router.push(routes.protected.medication);
   };
 
   return (
@@ -196,8 +233,18 @@ const MedicationModal = () => {
           title={TITLE[action]}
           leftIcon={
             isInfoMode && id ? (
-              <Pressable onPress={() => router.push(`/medication/edit?id=${id}`)}>
-                <IconSymbol color="#3C83F6" size={28} name="edit" />
+              <Pressable
+                onPress={() =>
+                  router.push(
+                    routes.protected.modal.editMedication(id),
+                  )
+                }
+              >
+                <IconSymbol
+                  color="#3C83F6"
+                  size={28}
+                  name="edit"
+                />
               </Pressable>
             ) : undefined
           }
@@ -206,7 +253,11 @@ const MedicationModal = () => {
           {isInfoMode ? (
             <FieldInput
               label="服藥者"
-              value={patientOptions.find((item) => item.value === medication.patientId)?.label ?? ""}
+              value={
+                patientOptions.find(
+                  (item) => item.value === medication.patientId,
+                )?.label ?? ""
+              }
               onChangeText={() => {}}
               disabled
             />
@@ -257,7 +308,9 @@ const MedicationModal = () => {
             numberOfLines={4}
           />
 
-          {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+          {error ? (
+            <ThemedText style={styles.errorText}>{error}</ThemedText>
+          ) : null}
         </Container>
 
         <Header>
@@ -268,7 +321,9 @@ const MedicationModal = () => {
             ]}
             onPress={isInfoMode ? handleDelete : handleSave}
           >
-            <ThemedText style={styles.actionButtonText}>{BUTTON[action]}</ThemedText>
+            <ThemedText style={styles.actionButtonText}>
+              {BUTTON[action]}
+            </ThemedText>
           </Pressable>
         </Header>
       </ThemedView>

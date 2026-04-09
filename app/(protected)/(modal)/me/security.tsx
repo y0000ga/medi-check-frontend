@@ -9,11 +9,13 @@ import ModalHeader from "@/components/ui/modal-header";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useUserStore } from "@/stores/user";
+import { routes } from "@/constants/route";
 
-export default function SecurityModal() {
+const SecurityModal = () => {
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore((state) => state.loadCurrentUser);
-  const logout = useUserStore((state) => state.logout);
+  const loadCurrentUser = useUserStore(
+    (state) => state.loadCurrentUser,
+  );
   const loading = useUserStore((state) => state.isLoading.length > 0);
 
   useEffect(() => {
@@ -21,11 +23,6 @@ export default function SecurityModal() {
       loadCurrentUser();
     }
   }, [currentUser, loadCurrentUser]);
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/sign-in");
-  };
 
   return (
     <>
@@ -35,12 +32,17 @@ export default function SecurityModal() {
         <Container>
           {!currentUser?.isEmailVerified ? (
             <View style={styles.noticeCard}>
-              <ThemedText style={styles.noticeTitle}>Email 尚未驗證</ThemedText>
+              <ThemedText style={styles.noticeTitle}>
+                Email 尚未驗證
+              </ThemedText>
               <ThemedText style={styles.noticeText}>
-                完成 Email 驗證後，之後在正式流程中會比較容易找回帳號與接收重要通知。
+                完成 Email
+                驗證後，之後在正式流程中會比較容易找回帳號與接收重要通知。
               </ThemedText>
               <Pressable style={styles.noticeButton}>
-                <ThemedText style={styles.noticeButtonText}>重新寄送驗證信</ThemedText>
+                <ThemedText style={styles.noticeButtonText}>
+                  重新寄送驗證信
+                </ThemedText>
               </Pressable>
             </View>
           ) : null}
@@ -48,25 +50,37 @@ export default function SecurityModal() {
           <View style={styles.infoCard}>
             <View style={styles.fieldRow}>
               <ThemedText style={styles.label}>Email 驗證</ThemedText>
-              <ThemedText style={[styles.value, currentUser?.isEmailVerified ? styles.verifiedText : styles.unverifiedText]}>
-                {currentUser?.isEmailVerified ? "已完成驗證" : "尚未驗證"}
+              <ThemedText
+                style={[
+                  styles.value,
+                  currentUser?.isEmailVerified
+                    ? styles.verifiedText
+                    : styles.unverifiedText,
+                ]}
+              >
+                {currentUser?.isEmailVerified
+                  ? "已完成驗證"
+                  : "尚未驗證"}
               </ThemedText>
             </View>
-
           </View>
         </Container>
         <Header>
-          <Pressable style={styles.secondaryButton} onPress={() => router.push("/reset-password")}>
-            <ThemedText style={styles.secondaryButtonText}>修改密碼</ThemedText>
-          </Pressable>
-          <Pressable style={styles.logoutButton} onPress={handleLogout}>
-            <ThemedText style={styles.logoutButtonText}>登出</ThemedText>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => router.push(routes.public.resetPassword)}
+          >
+            <ThemedText style={styles.secondaryButtonText}>
+              修改密碼
+            </ThemedText>
           </Pressable>
         </Header>
       </ThemedView>
     </>
   );
-}
+};
+
+export default SecurityModal;
 
 const styles = StyleSheet.create({
   screen: {
@@ -136,18 +150,6 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: "#2563EB",
-    width: "100%",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  logoutButton: {
-    width: "100%",
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#EF4444",
-  },
-  logoutButtonText: {
-    color: "white",
     width: "100%",
     textAlign: "center",
     fontWeight: "700",

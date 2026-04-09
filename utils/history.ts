@@ -7,7 +7,9 @@ import dayjs from "dayjs";
 export const formatDateTime = (value: string | null | undefined) =>
   value ? dayjs(value).format("YYYY/MM/DD HH:mm") : "尚未記錄";
 
-export const getRecommendedSource = (status: IRES_History["status"]): HistorySource => {
+export const getRecommendedSource = (
+  status: IRES_History["status"],
+): HistorySource => {
   switch (status) {
     case HistoryStatus.missed:
       return HistorySource.system;
@@ -25,15 +27,22 @@ export const splitCustomTags = (value: string) =>
     .map((tag) => tag.trim())
     .filter(Boolean);
 
-export const toFormValues = (history: IRES_History): EditableHistoryValues => {
-  const commonTags = history.symptomTags.filter((tag) => COMMON_SYMPTOM_TAGS.includes(tag));
-  const customTags = history.symptomTags.filter((tag) => !COMMON_SYMPTOM_TAGS.includes(tag));
+export const toFormValues = (
+  history: IRES_History,
+): EditableHistoryValues => {
+  const commonTags = history.symptomTags.filter((tag) =>
+    COMMON_SYMPTOM_TAGS.includes(tag),
+  );
+  const customTags = history.symptomTags.filter(
+    (tag) => !COMMON_SYMPTOM_TAGS.includes(tag),
+  );
 
   return {
     status: history.status,
     intakenTime: history.intakenTime ?? "",
     rate: history.rate != null ? String(history.rate) : "",
-    takenAmount: history.takenAmount != null ? String(history.takenAmount) : "",
+    takenAmount:
+      history.takenAmount != null ? String(history.takenAmount) : "",
     memo: history.memo ?? "",
     feeling: history.feeling ?? "",
     reason: history.reason ?? "",

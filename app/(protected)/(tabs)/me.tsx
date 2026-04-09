@@ -5,23 +5,33 @@ import { useRouter } from "expo-router";
 import Container from "@/components/ui/container";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import Header from "@/components/ui/header";
+import { routes } from "@/constants/route";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useUserStore } from "@/stores/user";
 import { useViewerStore } from "@/stores/viewer";
 import { SETTING_MENU_ITEMS } from "@/constants/user";
 
-export default function MeScreen() {
+const MeScreen = () => {
   const router = useRouter();
   const currentUser = useUserStore((state) => state.currentUser);
-  const loadCurrentUser = useUserStore((state) => state.loadCurrentUser);
-  const userLoading = useUserStore((state) => state.isLoading.length > 0);
+  const loadCurrentUser = useUserStore(
+    (state) => state.loadCurrentUser,
+  );
+  const userLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const mode = useViewerStore((state) => state.mode);
   const carePatients = useViewerStore((state) => state.carePatients);
-  const selectedPatientId = useViewerStore((state) => state.selectedPatientId);
+  const selectedPatientId = useViewerStore(
+    (state) => state.selectedPatientId,
+  );
   const viewerLoading = useViewerStore((state) => state.isLoading);
-  const hydrateViewer = useViewerStore((state) => state.hydrateForUser);
+  const hydrateViewer = useViewerStore(
+    (state) => state.hydrateForUser,
+  );
+  const logout = useUserStore((state) => state.logout);
 
   useEffect(() => {
     if (!currentUser) {
@@ -43,21 +53,39 @@ export default function MeScreen() {
       .join("");
   }, [currentUser?.name]);
 
+  const handleLogout = async () => {
+    await logout();
+    router.replace(routes.public.signIn);
+  };
+
   const viewerSummary = useMemo(() => {
     if (mode === "self") {
       return "目前查看：我的服藥";
     }
 
     if (selectedPatientId) {
-      const patient = carePatients.find((item) => item.patientId === selectedPatientId);
-      return patient ? `目前查看：${patient.patientName}` : "目前查看：照顧者視角";
+      const patient = carePatients.find(
+        (item) => item.patientId === selectedPatientId,
+      );
+      return patient
+        ? `目前查看：${patient.patientName}`
+        : "目前查看：照顧者視角";
     }
 
     return "目前查看：全部病人";
   }, [carePatients, mode, selectedPatientId]);
 
-  const handlePress = (key: (typeof SETTING_MENU_ITEMS)[number]["key"]) => {
-    router.push(`/(modal)/me/${key}`);
+  const handlePress = (
+    key: (typeof SETTING_MENU_ITEMS)[number]["key"],
+  ) => {
+    const targetRoute = {
+      viewer: routes.protected.modal.viewer,
+      profile: routes.protected.modal.profile,
+      security: routes.protected.modal.security,
+      "care-network": routes.protected.modal.careNetwork,
+    } as const;
+
+    router.push(targetRoute[key]);
   };
 
   return (
@@ -66,7 +94,9 @@ export default function MeScreen() {
       <ThemedView style={styles.screen}>
         <Header>
           <ThemedText type="title">我的設定</ThemedText>
-          <ThemedText style={styles.subtitle}>管理帳號、檢視身分與照顧關係。</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            管理帳號、檢視身分與照顧關係。
+          </ThemedText>
         </Header>
 
         <Container>
@@ -74,14 +104,23 @@ export default function MeScreen() {
             <>
               <View style={styles.profileCard}>
                 <View style={styles.avatar}>
-                  <ThemedText style={styles.avatarText}>{initials}</ThemedText>
+                  <ThemedText style={styles.avatarText}>
+                    {initials}
+                  </ThemedText>
                 </View>
                 <View style={styles.profileMeta}>
-                  <ThemedText type="subtitle" style={styles.profileName}>
+                  <ThemedText
+                    type="subtitle"
+                    style={styles.profileName}
+                  >
                     {currentUser.name}
                   </ThemedText>
-                  <ThemedText style={styles.profileEmail}>{currentUser.email}</ThemedText>
-                  <ThemedText style={styles.profileHint}>{viewerSummary}</ThemedText>
+                  <ThemedText style={styles.profileEmail}>
+                    {currentUser.email}
+                  </ThemedText>
+                  <ThemedText style={styles.profileHint}>
+                    {viewerSummary}
+                  </ThemedText>
                 </View>
               </View>
 
@@ -89,24 +128,49 @@ export default function MeScreen() {
                 {SETTING_MENU_ITEMS.map((item, index) => (
                   <Pressable
                     key={item.key}
-                    style={[styles.menuItem, index === SETTING_MENU_ITEMS.length - 1 && styles.menuItemLast]}
+                    style={[
+                      styles.menuItem,
+                      index === SETTING_MENU_ITEMS.length - 1 &&
+                        styles.menuItemLast,
+                    ]}
                     onPress={() => handlePress(item.key)}
                   >
                     <View style={styles.menuText}>
-                      <ThemedText style={styles.menuTitle}>{item.title}</ThemedText>
-                      <ThemedText style={styles.menuDescription}>{item.description}</ThemedText>
+                      <ThemedText style={styles.menuTitle}>
+                        {item.title}
+                      </ThemedText>
+                      <ThemedText style={styles.menuDescription}>
+                        {item.description}
+                      </ThemedText>
                     </View>
-                    <ThemedText style={styles.menuArrow}>›</ThemedText>
+                    <ThemedText style={styles.menuArrow}>
+                      ›
+                    </ThemedText>
                   </Pressable>
                 ))}
               </View>
+              <Pressable
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <ThemedText style={styles.logoutButtonText}>
+                  登出
+                </ThemedText>
+              </Pressable>
             </>
           ) : (
             <View style={styles.emptyCard}>
               <ThemedText type="subtitle">尚未登入帳號</ThemedText>
-              <ThemedText style={styles.emptyText}>登入後即可查看個人設定、檢視身分與照顧關係。</ThemedText>
-              <Pressable style={styles.loginButton} onPress={() => router.replace("/sign-in")}>
-                <ThemedText style={styles.loginButtonText}>前往登入</ThemedText>
+              <ThemedText style={styles.emptyText}>
+                登入後即可查看個人設定、檢視身分與照顧關係。
+              </ThemedText>
+              <Pressable
+                style={styles.loginButton}
+                onPress={() => router.replace(routes.public.signIn)}
+              >
+                <ThemedText style={styles.loginButtonText}>
+                  前往登入
+                </ThemedText>
               </Pressable>
             </View>
           )}
@@ -114,7 +178,9 @@ export default function MeScreen() {
       </ThemedView>
     </>
   );
-}
+};
+
+export default MeScreen;
 
 const styles = StyleSheet.create({
   screen: {
@@ -231,6 +297,18 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: "white",
+    fontWeight: "700",
+  },
+  logoutButton: {
+    width: "100%",
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: "#EF4444",
+  },
+  logoutButtonText: {
+    color: "white",
+    width: "100%",
+    textAlign: "center",
     fontWeight: "700",
   },
 });

@@ -1,22 +1,22 @@
 export enum Action {
   Info = "info",
   Create = "create",
-  Edit = "edit"
+  Edit = "edit",
 }
 export enum DoseUnit {
-  Mg = 'mg',
-  Ml = 'ml',
-  Tablet = 'tablet',
-  Capsule = 'capsule',
-  Package = 'package',
-  Drop = 'drop'
+  Mg = "mg",
+  Ml = "ml",
+  Tablet = "tablet",
+  Capsule = "capsule",
+  Package = "package",
+  Drop = "drop",
 }
 
 export enum FrequencyUnit {
-  Day = 'day',
-  Week = 'week',
-  Month = 'month',
-  Year = 'year'
+  Day = "day",
+  Week = "week",
+  Month = "month",
+  Year = "year",
 }
 
 export enum Weekday {
@@ -26,21 +26,21 @@ export enum Weekday {
   Wed,
   Thu,
   Fri,
-  Sat
+  Sat,
 }
 
 export enum DosageForm {
-  Tablet = 'tablet',
-  Capsule = 'capsule',
-  Softgel = 'softgel',
-  Liquid = 'liquid',
-  Powder = 'powder',
-  Pill = 'pill',
-  Spray = 'spray'
+  Tablet = "tablet",
+  Capsule = "capsule",
+  Softgel = "softgel",
+  Liquid = "liquid",
+  Powder = "powder",
+  Pill = "pill",
+  Spray = "spray",
 }
 
 export enum UserStatus {
-  active = 'active',
-  invited = 'invited',
-  disabled = 'disabled'
+  active = "active",
+  invited = "invited",
+  disabled = "disabled",
 }

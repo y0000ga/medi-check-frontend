@@ -1,8 +1,12 @@
-import { MaterialIcons } from '@expo/vector-icons';
-import { SymbolWeight } from 'expo-symbols';
-import { OpaqueColorValue, type StyleProp, type TextStyle } from 'react-native';
+import { MaterialIcons } from "@expo/vector-icons";
+import { SymbolWeight } from "expo-symbols";
+import {
+  OpaqueColorValue,
+  type StyleProp,
+  type TextStyle,
+} from "react-native";
 
-export function IconSymbol({
+export const IconSymbol = ({
   name,
   size = 24,
   color,
@@ -13,6 +17,13 @@ export function IconSymbol({
   color: string | OpaqueColorValue;
   style?: StyleProp<TextStyle>;
   weight?: SymbolWeight;
-}) {
-  return <MaterialIcons color={color} size={size} name={name} style={style} />;
-}
+}) => {
+  return (
+    <MaterialIcons
+      color={color}
+      size={size}
+      name={name}
+      style={style}
+    />
+  );
+};

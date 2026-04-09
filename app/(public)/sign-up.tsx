@@ -3,15 +3,19 @@ import { useState } from "react";
 import { useRouter } from "expo-router";
 
 import FieldInput from "@/components/ui/field-input";
+import { routes } from "@/constants/route";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { ApiRequestError } from "@/libs/api/client";
 import { useUserStore } from "@/stores/user";
 
-export default function SignUpScreen() {
+const SignUpScreen = () => {
   const router = useRouter();
   const register = useUserStore((state) => state.register);
-  const authLoading = useUserStore((state) => state.isLoading.length > 0);
+  const authLoading = useUserStore(
+    (state) => state.isLoading.length > 0,
+  );
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -20,7 +24,12 @@ export default function SignUpScreen() {
   const [error, setError] = useState("");
 
   const handleSignUp = async () => {
-    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !password.trim() ||
+      !confirmPassword.trim()
+    ) {
       setError("請完整填寫註冊資訊。");
       return;
     }
@@ -33,9 +42,19 @@ export default function SignUpScreen() {
     setError("");
     try {
       await register({ name, email, password });
-      router.replace("/(tabs)");
+      router.replace(routes.protected.home);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "註冊失敗，請稍後再試。");
+      // TODO: 續處理錯誤部分
+      // TODO: 續處理帳號密碼規則
+      console.log(err);
+      if (err instanceof ApiRequestError) {
+        console.log("sign-up error:", err.raw);
+        setError(err.message);
+        return;
+      }
+      setError(
+        err instanceof Error ? err.message : "註冊失敗，請稍後再試。",
+      );
     }
   };
 
@@ -46,7 +65,10 @@ export default function SignUpScreen() {
         <View style={styles.content}>
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <ThemedText type="subtitle" style={styles.cardTitle}>
+              <ThemedText
+                type="subtitle"
+                style={styles.cardTitle}
+              >
                 建立帳號
               </ThemedText>
             </View>
@@ -90,21 +112,41 @@ export default function SignUpScreen() {
               autoCorrect={false}
             />
 
-            {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+            {error ? (
+              <ThemedText style={styles.errorText}>
+                {error}
+              </ThemedText>
+            ) : null}
 
-            <Pressable style={[styles.primaryButton, authLoading && styles.buttonDisabled]} onPress={handleSignUp} disabled={authLoading}>
-              <ThemedText style={styles.primaryButtonText}>註冊</ThemedText>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                authLoading && styles.buttonDisabled,
+              ]}
+              onPress={handleSignUp}
+              disabled={authLoading}
+            >
+              <ThemedText style={styles.primaryButtonText}>
+                註冊
+              </ThemedText>
             </Pressable>
 
-            <Pressable style={styles.bottomAction} onPress={() => router.push("/sign-in")}>
-              <ThemedText style={styles.bottomActionText}>已經有帳號？返回登入</ThemedText>
+            <Pressable
+              style={styles.bottomAction}
+              onPress={() => router.push(routes.public.signIn)}
+            >
+              <ThemedText style={styles.bottomActionText}>
+                已經有帳號？返回登入
+              </ThemedText>
             </Pressable>
           </View>
         </View>
       </ThemedView>
     </>
   );
-}
+};
+
+export default SignUpScreen;
 
 const styles = StyleSheet.create({
   screen: {

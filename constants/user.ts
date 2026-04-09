@@ -4,7 +4,7 @@ export const USER_STATUS_LABEL = {
   [UserStatus.active]: "啟用中",
   [UserStatus.invited]: "待啟用",
   [UserStatus.disabled]: "已停用",
-}
+};
 
 export const SETTING_MENU_ITEMS = [
   {
@@ -20,11 +20,13 @@ export const SETTING_MENU_ITEMS = [
   {
     key: "security",
     title: "安全與登入",
-    description: "查看 Email 驗證狀態、最近登入時間，並可前往修改密碼。",
+    description:
+      "查看 Email 驗證狀態、最近登入時間，並可前往修改密碼。",
   },
   {
     key: "care-network",
     title: "照顧關係",
-    description: "查看我可管理的病人、現有照顧者，以及待處理的照顧邀請。",
+    description:
+      "查看我可管理的病人、現有照顧者，以及待處理的照顧邀請。",
   },
 ] as const;
