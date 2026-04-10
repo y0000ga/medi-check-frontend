@@ -16,8 +16,7 @@ import { useMedicationStore } from "@/stores/medication";
 import { useViewerStore } from "@/stores/viewer";
 import { DosageForm } from "@/types/common";
 import FieldInput from "@/components/ui/field-input";
-
-const PAGE_SIZE = 20;
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
 const SORT_OPTIONS = [
   { label: "Newest", value: "created_at:desc" },
@@ -53,7 +52,7 @@ const Screen = () => {
   );
 
   const router = useRouter();
-  const totalPages = Math.max(1, Math.ceil(totalSize / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(totalSize / DEFAULT_PAGE_SIZE));
   const [sortBy, sortOrder] = sortValue.split(":") as [
     string,
     "desc" | "asc",
@@ -90,7 +89,7 @@ const Screen = () => {
       await loadMedications({
         search,
         page,
-        pageSize: PAGE_SIZE,
+        pageSize: DEFAULT_PAGE_SIZE,
         sortBy,
         sortOrder,
         dosageForm: dosageForm || null,

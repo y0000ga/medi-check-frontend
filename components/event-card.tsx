@@ -2,9 +2,9 @@ import dayjs from "dayjs";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { IEvent } from "@/types/schedule";
 import { evaluateLabel, evaluteStatus } from "@/utils/common";
 import { IconSymbol } from "./ui/icon-symbol";
+import { IScheduleEvent } from "@/types/api/schedule";
 
 interface IProps {
   toggleCheck: () => void;
@@ -13,7 +13,7 @@ interface IProps {
   onViewMedication?: () => void;
   patientNameTag?: string | null;
   expanded?: boolean;
-  event: IEvent;
+  event: IScheduleEvent;
 }
 
 const EventCard = ({
@@ -24,22 +24,22 @@ const EventCard = ({
   patientNameTag,
   expanded = false,
   event: {
-    scheduledTime,
-    intakenTime,
+    scheduled_at,
+    history,
     amount,
-    doseUnit,
-    medicationName,
-    medicationDosageForm,
+    dose_unit,
+    medication_name,
+    medication_dosage_form,
   },
 }: IProps) => {
   const { isOperable, isIntaken, isMissed } = evaluteStatus({
-    scheduledTime,
-    intakenTime,
+    scheduledTime:scheduled_at,
+    intakenTime: history?.intake_at,
   });
 
   const { label, icon: headerIcon } = evaluateLabel({
-    medicationDosageForm,
-    doseUnit,
+    medicationDosageForm: medication_dosage_form,
+    doseUnit: dose_unit,
     amount,
   });
 
@@ -82,10 +82,10 @@ const EventCard = ({
           </View>
           <View style={styles.content}>
             <Text style={[styles.title, isIntaken && styles.done]}>
-              {medicationName}
+              {medication_name}
             </Text>
             <Text style={styles.meta}>
-              {label} {dayjs(scheduledTime).format("HH:mm")}
+              {label} {dayjs(scheduled_at).format("HH:mm")}
             </Text>
           </View>
           <View style={styles.checkAction}>
@@ -129,14 +129,14 @@ const EventCard = ({
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>預定時間</Text>
             <Text style={styles.detailValue}>
-              {dayjs(scheduledTime).format("YYYY/MM/DD HH:mm")}
+              {dayjs(scheduled_at).format("YYYY/MM/DD HH:mm")}
             </Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>紀錄時間</Text>
             <Text style={styles.detailValue}>
-              {intakenTime
-                ? dayjs(intakenTime).format("YYYY/MM/DD HH:mm")
+              {history?.intake_at
+                ? dayjs(history?.intake_at).format("YYYY/MM/DD HH:mm")
                 : "尚未紀錄"}
             </Text>
           </View>

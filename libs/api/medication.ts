@@ -1,7 +1,4 @@
-import {
-  IREQ_MedicationPayload,
-  IRES_Medication,
-} from "@/types/api";
+import { IREQ_MedicationPayload } from "@/types/api";
 import { IPaginationResponse } from "@/types/api/base";
 import {
   ICreateMedicationBody,
@@ -14,27 +11,8 @@ import {
   TGetMedicationsParams,
 } from "@/types/api/medication";
 
-import { getAccessiblePatientIds } from "./access";
 import { request } from "./client";
-
-const DEFAULT_PAGE_SIZE = 200;
-
-export interface MedicationListResult {
-  page: number;
-  totalSize: number;
-  list: IRES_Medication[];
-}
-
-const toMedicationResponse = (
-  medication: IMedication | IMedicationDetail,
-): IRES_Medication => ({
-  id: medication.id,
-  patientId: medication.patient_id,
-  patientName: medication.patient_name,
-  name: medication.name,
-  dosageForm: medication.dosage_form,
-  memo: "note" in medication ? medication.note ?? "" : "",
-});
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
 export const getMedicationList = (
   patientId: string,
@@ -46,9 +24,7 @@ export const getMedicationList = (
     TGetMedicationsParams
   >(`/patients/${patientId}/medications`, { params });
 
-export const getAllMedications = (
-  params: TGetAllMedicationsParams,
-) =>
+export const getAllMedications = (params: TGetAllMedicationsParams) =>
   request<
     IPaginationResponse<IMedication>,
     undefined,
@@ -102,15 +78,6 @@ export const fetchMedications = async ({
   sortOrder?: "desc" | "asc";
   dosageForm?: TGetAllMedicationsParams["dosage_form"];
 }) => {
-  // const patientIds = await getAccessiblePatientIds();
-  // if (!patientIds.length) {
-  //   return {
-  //     page,
-  //     totalSize: 0,
-  //     list: [],
-  //   } satisfies MedicationListResult;
-  // }
-
   const response = await getAllMedications({
     // patient_ids: patientIds,
     page,
@@ -121,23 +88,19 @@ export const fetchMedications = async ({
     search: search?.trim() || null,
   });
 
-  return {
-    page: response.page,
-    totalSize: response.total_size,
-    list: response.list.map(toMedicationResponse),
-  } satisfies MedicationListResult;
+  return response;
 };
 
 export const fetchMedicationDetail = async (id: string) => {
   const detail = await getMedicationDetail(id);
-  return toMedicationResponse(detail);
+  return detail;
 };
 
 export const fetchMedicationPatientMap = async () => {
   const medications = await fetchMedications({});
   return medications.list.map((item) => ({
     medicationId: item.id,
-    patientId: item.patientId,
+    patientId: item.patient_id,
   }));
 };
 
@@ -153,7 +116,7 @@ export const fetchMedicationsByPatient = async (
     search: search?.trim() || null,
   });
 
-  return response.list.map(toMedicationResponse);
+  return response;
 };
 
 export const createMedication = async (

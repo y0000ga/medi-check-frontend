@@ -1,8 +1,31 @@
-import { DoseUnit, FrequencyUnit, Weekday } from "@/types/common";
+import {
+  DosageForm,
+  DoseUnit,
+  FrequencyUnit,
+  Weekday,
+} from "@/types/common";
 
 import { TPaginationParams } from "./base";
+import { HistoryStatus } from "../domain";
 
 export type ApiScheduleEndType = "never" | "until" | "counts";
+
+export interface IScheduleEvent {
+  schedule_id: string;
+  patient_id: string;
+  patient_name: string;
+  medication_id: string;
+  medication_name: string;
+  medication_dosage_form: DosageForm;
+  scheduled_at: string;
+  amount: number;
+  dose_unit: DoseUnit;
+  history: null | {
+    id: string;
+    status: HistoryStatus;
+    intake_at: string | null;
+  };
+}
 
 export interface IScheduleDetail {
   id: string;
@@ -60,7 +83,7 @@ export interface IEditScheduleResponse {
 export interface IScheduleMatchesResponse {
   from_date: string;
   to_date: string;
-  list: IScheduleDetail[];
+  list: IScheduleEvent[];
 }
 
 export type TGetSchedulesParams = TPaginationParams & {

@@ -12,7 +12,6 @@ import {
   TGetHistoriesParams,
 } from "@/types/api/history";
 
-import { getAccessiblePatientIds } from "./access";
 import { request } from "./client";
 
 const DEFAULT_PAGE_SIZE = 200;
@@ -79,14 +78,10 @@ export const quickCheckHistory = (body: IQuickCheckHistoryBody) =>
   );
 
 export const fetchHistories = async (date?: string) => {
-  const patientIds = await getAccessiblePatientIds();
-  if (!patientIds.length) {
-    return [];
-  }
+
 
   const targetDate = date ? dayjs(date) : dayjs();
   const params: TGetHistoriesParams = {
-    patient_ids: patientIds,
     page: 1,
     page_size: DEFAULT_PAGE_SIZE,
     sort_by: "scheduled_at",

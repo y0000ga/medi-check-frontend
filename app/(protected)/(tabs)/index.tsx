@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import EventCard from "@/components/event-card";
@@ -11,130 +11,64 @@ import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import Header from "@/components/ui/header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { routes } from "@/constants/route";
-import { fetchHistories } from "@/libs/api/history";
-import { fetchMedications } from "@/libs/api/medication";
-import { fetchSchedules } from "@/libs/api/schedule";
+import { fetchScheduleEvents } from "@/libs/api/schedule";
 import { useViewerStore } from "@/stores/viewer";
 import { IRES_Event } from "@/types/api";
 import { evaluteStatus } from "@/utils/common";
-import { deriveEventsFromClientData } from "@/utils/occurrence";
+import { IScheduleEvent } from "@/types/api/schedule";
 
 const Screen = () => {
-  const [events, setEvents] = useState<IRES_Event[]>([]);
-  const [expandedEventId, setExpandedEventId] = useState<
-    string | null
+  const [events, setEvents] = useState<IScheduleEvent[]>([]);
+  const [expandedEventIndex, setExpandedEventIndex] = useState<
+    number | null
   >(null);
   const router = useRouter();
   const viewerMode = useViewerStore((state) => state.mode);
-  const selfPatient = useViewerStore((state) => state.ownPatient);
   const carePatients = useViewerStore((state) => state.carePatients);
   const selectedPatientId = useViewerStore(
     (state) => state.selectedPatientId,
   );
 
   useEffect(() => {
-    let active = true;
-
     const loadEvents = async () => {
       const targetDate = dayjs();
-      const [schedules, medications, histories] = await Promise.all([
-        fetchSchedules({ date: targetDate.toISOString() }),
-        fetchMedications({}),
-        fetchHistories(targetDate.toISOString()),
-      ]);
-
-      const items = deriveEventsFromClientData({
-        schedules,
-        medications: medications.list,
-        histories,
-        targetDate,
+      const eventList = await fetchScheduleEvents({
+        date: targetDate.toISOString(),
       });
-
-      if (!active) {
-        return;
-      }
-
-      setEvents(items);
+      setEvents(eventList);
     };
 
     loadEvents();
-
-    return () => {
-      active = false;
-    };
   }, []);
 
-  const filteredEvents = useMemo(() => {
-    if (viewerMode === "self") {
-      return events.filter(
-        (event) => event.patientId === selfPatient?.id,
-      );
-    }
-
-    if (selectedPatientId) {
-      return events.filter(
-        (event) => event.patientId === selectedPatientId,
-      );
-    }
-
-    const carePatientIds = new Set(
-      carePatients.map((item) => item.patientId),
-    );
-    return events.filter((event) =>
-      carePatientIds.has(event.patientId),
-    );
-  }, [
-    carePatients,
-    events,
-    selectedPatientId,
-    selfPatient?.id,
-    viewerMode,
-  ]);
-
   useEffect(() => {
-    setExpandedEventId(null);
+    setExpandedEventIndex(null);
   }, [viewerMode, selectedPatientId]);
 
-  const getPatientNameTag = (event: IRES_Event) => {
-    if (viewerMode !== "caregiver") {
-      return null;
-    }
-
-    if (selectedPatientId) {
-      return (
-        carePatients.find(
-          (item) => item.patientId === selectedPatientId,
-        )?.patientName ?? null
-      );
-    }
-
-    return (
-      event.patientName ||
-      (carePatients.find((item) => item.patientId === event.patientId)
-        ?.patientName ??
-        null)
-    );
-  };
-
-  const checkEvent = (event: IRES_Event) => {
-    const { isOperable } = evaluteStatus(event);
+  const checkEvent = (event: IScheduleEvent, eventIndex: number) => {
+    const { isOperable } = evaluteStatus({
+      scheduledTime: event.scheduled_at,
+      intakenTime: event.history?.intake_at,
+    });
 
     if (!isOperable) {
       return;
     }
 
-    setEvents((prev) =>
-      prev.map((item) =>
-        event.id === item.id
-          ? {
-              ...item,
-              intakenTime: item.intakenTime
-                ? null
-                : dayjs().toISOString(),
-            }
-          : item,
-      ),
-    );
+    // 更新打 API 然後 reload
+
+    // setEvents((prev) =>
+    //   prev.map((item, itemIndex) =>
+    //     item.inke === eventIndex
+    //       ? {
+    //           ...item,
+    //           intakenTime: item.intakenTime
+    //             ? null
+    //             : dayjs().toISOString(),
+    //         }
+    //       : item,
+    //   ),
+    // );
   };
 
   return (
@@ -154,36 +88,36 @@ const Screen = () => {
           <View style={styles.overview}>
             <View style={styles.chip}>
               <Text style={styles.chipText}>
-                {filteredEvents.length} REMAINING
+                {events.length} REMAINING
               </Text>
             </View>
           </View>
           <View style={styles.eventContainer}>
-            {filteredEvents.map((event) => (
+            {events.map((event, eventIndex) => (
               <EventCard
-                key={event.id}
-                toggleCheck={() => checkEvent(event)}
-                expanded={expandedEventId === event.id}
+                key={eventIndex}
+                toggleCheck={() => checkEvent(event, eventIndex)}
+                expanded={expandedEventIndex === eventIndex}
                 toggleExpanded={() => {
-                  setExpandedEventId((current) =>
-                    current === event.id ? null : event.id,
+                  setExpandedEventIndex((current) =>
+                    current === eventIndex ? null : eventIndex,
                   );
                 }}
                 onViewMedication={() =>
                   router.push(
                     routes.protected.modal.infoMedication(
-                      event.medicationId,
+                      event.medication_id,
                     ),
                   )
                 }
                 onManage={() =>
                   router.push(
                     routes.protected.modal.infoSchedule(
-                      event.scheduleId,
+                      event.schedule_id,
                     ),
                   )
                 }
-                patientNameTag={getPatientNameTag(event)}
+                patientNameTag={event.patient_name}
                 event={event}
               />
             ))}

@@ -7,6 +7,7 @@ import {
 import { ScheduleEndType } from "@/types/domain";
 import { ScheduleFormValues } from "@/types/schedule";
 import { DOSE_UNIT_LABELS } from "./medication";
+import dayjs from "dayjs";
 
 export const DEFAULT_SCHEDULE_FORM: ScheduleFormValues = {
   id: "",
@@ -14,7 +15,7 @@ export const DEFAULT_SCHEDULE_FORM: ScheduleFormValues = {
   medicationId: "",
   timezone:
     Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Taipei",
-  startAt: new Date().toISOString(),
+  startDate: dayjs(new Date().toISOString()).format("YYYY-MM-DD"),
   timeSlotsText: "08:00",
   amount: "1",
   doseUnit: "",

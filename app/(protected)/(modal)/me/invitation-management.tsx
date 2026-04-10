@@ -34,8 +34,7 @@ import {
 } from "@/types/api/care-invitation";
 import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
 import { createEnumOptions } from "@/utils/common";
-
-const PAGE_SIZE = 10;
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
 const SORT_ORDER_LABEL = {
   desc: "最新優先",
@@ -80,7 +79,7 @@ const InvitationManagementModal = () => {
     try {
       const invitation = await getInvitationList({
         page,
-        page_size: PAGE_SIZE,
+        page_size: DEFAULT_PAGE_SIZE,
         sort_by: "created_at",
         sort_order: sortOrder,
         direction: directionFilter,
@@ -140,7 +139,7 @@ const InvitationManagementModal = () => {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(inviteInfo.total_size / PAGE_SIZE),
+    Math.ceil(inviteInfo.total_size / DEFAULT_PAGE_SIZE),
   );
   const canGoPrev = page > 1;
   const canGoNext = page < totalPages;

@@ -104,14 +104,10 @@ export interface IRES_Event {
   medicationId: IDB_Medication["id"];
   medicationName: IDB_Medication["name"];
   medicationDosageForm: IDB_Medication["dosageForm"];
-  historyId: IDB_History["id"] | null;
-  status: IDB_History["status"];
-  intakenTime?: IDB_History["intakenTime"];
-  rate?: IDB_History["rate"];
-  takenAmount?: IDB_History["takenAmount"];
-  memo?: IDB_History["memo"];
-  feeling?: IDB_History["feeling"];
-  reason?: IDB_History["reason"];
-  source?: IDB_History["source"];
-  symptomTags?: IDB_History["symptomTags"];
+//
+
+
+
+
+
 }

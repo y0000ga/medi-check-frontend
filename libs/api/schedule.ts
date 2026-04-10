@@ -13,99 +13,12 @@ import {
   TGetSchedulesParams,
 } from "@/types/api/schedule";
 import { IDB_Schedule } from "@/types/db";
-import { ScheduleEndType } from "@/types/domain";
 
-import { getAccessiblePatientIds } from "./access";
 import { request } from "./client";
-
-const DEFAULT_PAGE_SIZE = 200;
-
-const toDomainEndType = (
-  endType: ApiScheduleEndType | null,
-): ScheduleEndType | null => {
-  if (endType === null) {
-    return null;
-  }
-
-  if (endType === "counts") {
-    return ScheduleEndType.count;
-  }
-
-  if (endType === "until") {
-    return ScheduleEndType.until;
-  }
-
-  return ScheduleEndType.never;
-};
-
-const toApiEndType = (
-  endType: ScheduleEndType | null,
-): ApiScheduleEndType | null => {
-  if (endType === null) {
-    return null;
-  }
-
-  if (endType === ScheduleEndType.count) {
-    return "counts";
-  }
-
-  if (endType === ScheduleEndType.until) {
-    return "until";
-  }
-
-  return "never";
-};
-
-const toScheduleResponse = (
-  schedule: IScheduleDetail,
-): IDB_Schedule => ({
-  id: schedule.id,
-  patientId: schedule.patient_id,
-  medicationId: schedule.medication_id,
-  timezone: schedule.timezone,
-  startDate: schedule.started_date,
-  timeSlots: schedule.time_slots ?? [],
-  amount: schedule.amount,
-  doseUnit: schedule.dose_unit,
-  frequencyUnit: schedule.frequency_unit,
-  interval: schedule.interval,
-  weekdays: schedule.weekdays,
-  endType: toDomainEndType(schedule.end_type),
-  untilDate: schedule.until_date,
-  occurrenceCount: schedule.occurrence_count,
-});
-
-const toCreateScheduleBody = (
-  payload: Omit<IDB_Schedule, "id">,
-): ICreateScheduleBody => ({
-  timezone: payload.timezone,
-  start_date: payload.startDate,
-  time_slots: payload.timeSlots,
-  amount: payload.amount,
-  dose_unit: payload.doseUnit,
-  frequency_unit: payload.frequencyUnit,
-  interval: payload.interval,
-  weekdays: payload.weekdays,
-  end_type: toApiEndType(payload.endType),
-  until_date: payload.untilDate,
-  occurrence_count: payload.occurrenceCount,
-});
-
-const toEditScheduleBody = (
-  payload: Partial<IDB_Schedule>,
-): IEditScheduleBody => ({
-  timezone: payload.timezone,
-  start_date: payload.startDate,
-  time_slots: payload.timeSlots,
-  amount: payload.amount,
-  dose_unit: payload.doseUnit,
-  frequency_unit: payload.frequencyUnit,
-  interval: payload.interval,
-  weekdays: payload.weekdays,
-  end_type: toApiEndType(payload.endType ?? null),
-  until_date: payload.untilDate,
-  occurrence_count: payload.occurrenceCount,
-});
+import {
+  toCreateScheduleBody,
+  toEditScheduleBody,
+} from "@/schemas/schedule";
 
 export const getScheduleList = (params: TGetSchedulesParams) =>
   request<
@@ -155,46 +68,22 @@ export const removeSchedule = (scheduleId: string) =>
     method: "DELETE",
   });
 
-export const fetchSchedules = async ({
-  patientId,
+export const fetchScheduleEvents = async ({
   date,
 }: {
-  patientId?: string;
-  date?: string;
-} = {}) => {
-  const patientIds = patientId
-    ? [patientId]
-    : await getAccessiblePatientIds();
-
-  if (!patientIds.length) {
-    return [];
-  }
-
-  if (date) {
-    const targetDate = dayjs(date).format("YYYY-MM-DD");
-    const response = await getScheduleMatches({
-      patient_ids: patientIds,
-      from_date: targetDate,
-      to_date: targetDate,
-    });
-
-    return response.list.map(toScheduleResponse);
-  }
-
-  const response = await getScheduleList({
-    patient_ids: patientIds,
-    page: 1,
-    page_size: DEFAULT_PAGE_SIZE,
-    sort_by: "created_at",
-    sort_order: "desc",
+  date: string;
+}) => {
+  const targetDate = dayjs(date).format("YYYY-MM-DD");
+  const response = await getScheduleMatches({
+    from_date: targetDate,
+    to_date: targetDate,
   });
-
-  return response.list.map(toScheduleResponse);
+  return response.list;
 };
 
 export const fetchScheduleDetail = async (id: string) => {
   const detail = await getScheduleDetail(id);
-  return toScheduleResponse(detail);
+  return detail;
 };
 
 export const createSchedule = async (

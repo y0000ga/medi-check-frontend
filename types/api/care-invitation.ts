@@ -1,5 +1,7 @@
 import { TPaginationParams } from "./base";
 
+// 代表由後端定義的事項，非因前端顯示而定義
+
 export enum Role {
   Patient = "patient",
   CareGiver = "caregiver",
@@ -9,15 +11,6 @@ export enum PermissionLevel {
   Read = "read",
   Write = "write",
   Admin = "admin",
-}
-
-export interface ICreateInvitationBody {
-  invitee_email: string;
-  permission_level: PermissionLevel;
-}
-
-export interface ICreateInvitationResponse {
-  id: string;
 }
 
 export enum InvitationType {
@@ -35,6 +28,15 @@ export enum InvationStatus {
 export enum InvitationDirection {
   sent = "sent",
   received = "received",
+}
+
+export interface ICreateInvitationBody {
+  invitee_email: string;
+  permission_level: PermissionLevel;
+}
+
+export interface ICreateInvitationResponse {
+  id: string;
 }
 
 export interface IInvitation {

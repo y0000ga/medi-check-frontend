@@ -1,4 +1,3 @@
-import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Pressable,
@@ -16,7 +15,6 @@ import { PERMISSION_LABEL, ROLE_LABEL } from "@/constants/care";
 import Container from "@/components/ui/container";
 import FieldPicker from "@/components/ui/field-picker";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
-import Header from "@/components/ui/header";
 import ModalHeader from "@/components/ui/modal-header";
 import { getCareRelationships } from "@/libs/api/care-relationship";
 import { createCarePatient } from "@/libs/api/patient";
@@ -27,8 +25,7 @@ import { IPaginationResponse } from "@/types/api/base";
 import { ICareRelationship } from "@/types/api/care-relationship";
 import { ICreatePatientInput } from "@/types/schemas/patient";
 import { createEnumOptions } from "@/utils/common";
-
-const PAGE_SIZE = 10;
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
 const SORT_ORDER_LABEL = {
   desc: "最新優先",
@@ -66,7 +63,7 @@ const PatientCareModal = () => {
     try {
       const relationship = await getCareRelationships({
         page,
-        page_size: PAGE_SIZE,
+        page_size: DEFAULT_PAGE_SIZE,
         sort_by: "created_at",
         sort_order: sortOrder,
         permission_level: permissionFilter,
@@ -93,7 +90,7 @@ const PatientCareModal = () => {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(relationsInfo.total_size / PAGE_SIZE),
+    Math.ceil(relationsInfo.total_size / DEFAULT_PAGE_SIZE),
   );
   const canGoPrev = page > 1;
   const canGoNext = page < totalPages;

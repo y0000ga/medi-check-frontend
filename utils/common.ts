@@ -3,7 +3,6 @@ import {
   MEDICATION_DOSAGE_FORM,
 } from "@/constants/medication";
 import { IRES_Medication } from "@/types/api";
-import { PermissionLevel } from "@/types/api/care-invitation";
 import { DosageForm } from "@/types/common";
 import { IEvent } from "@/types/schedule";
 import dayjs from "dayjs";
@@ -11,7 +10,10 @@ import dayjs from "dayjs";
 export const evaluteStatus = ({
   intakenTime,
   scheduledTime,
-}: Pick<IEvent, "scheduledTime" | "intakenTime">) => {
+}: {
+  intakenTime?: string | null;
+  scheduledTime: string;
+}) => {
   const now = dayjs();
   const scheduledAt = dayjs(scheduledTime);
   const isIntaken = Boolean(intakenTime);

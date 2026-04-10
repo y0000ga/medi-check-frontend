@@ -23,6 +23,7 @@ import { useUserStore } from "@/stores/user";
 import { useViewerStore } from "@/stores/viewer";
 import { Action, DosageForm } from "@/types/common";
 import { IRES_Medication } from "@/types/api";
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
 const TITLE: Record<Action, string> = {
   [Action.Create]: "Create Medication",
@@ -49,7 +50,6 @@ const CREATE_STEPS = [
   "Medication details",
 ] as const;
 
-const PAGE_SIZE = 5;
 
 const MedicationModal = () => {
   const router = useRouter();
@@ -114,7 +114,7 @@ const MedicationModal = () => {
       try {
         const response = await getPatientList({
           page: patientPage,
-          page_size: PAGE_SIZE,
+          page_size: DEFAULT_PAGE_SIZE,
           sort_by: "created_at",
           sort_order: "desc",
           search: patientFilter || null,
@@ -134,7 +134,7 @@ const MedicationModal = () => {
         setPatientOptions(options);
         setPatientPageItems(options);
         setPatientTotalPages(
-          Math.max(1, Math.ceil(response.total_size / PAGE_SIZE)),
+          Math.max(1, Math.ceil(response.total_size / DEFAULT_PAGE_SIZE)),
         );
 
         setMedication((current) => {

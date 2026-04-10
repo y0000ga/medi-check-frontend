@@ -82,7 +82,7 @@ export interface Schedule {
   patientId: string;
   medicationId: string;
   timezone: string;
-  startAt: string;
+  startDate: string;
   timeSlots: string[];
   amount: number;
   doseUnit:

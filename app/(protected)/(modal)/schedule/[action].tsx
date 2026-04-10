@@ -51,8 +51,8 @@ import {
   toScheduleFormValues,
   toSchedulePayload,
 } from "@/utils/schedule";
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
-const PAGE_SIZE = 20;
 const CREATE_STEPS = [
   "Select patient",
   "Select medication",
@@ -157,7 +157,7 @@ const ScheduleModal = () => {
       try {
         const response = await getPatientList({
           page: patientPage,
-          page_size: PAGE_SIZE,
+          page_size: DEFAULT_PAGE_SIZE,
           sort_by: "created_at",
           sort_order: "desc",
           search: patientFilter || null,
@@ -176,7 +176,7 @@ const ScheduleModal = () => {
 
         setPatientPageItems(items);
         setPatientTotalPages(
-          Math.max(1, Math.ceil(response.total_size / PAGE_SIZE)),
+          Math.max(1, Math.ceil(response.total_size / DEFAULT_PAGE_SIZE)),
         );
         setSchedule((current) => {
           if (
@@ -245,7 +245,7 @@ const ScheduleModal = () => {
         return;
       }
 
-      const nextOptions = medications.map((item) => ({
+      const nextOptions = medications.list.map((item) => ({
         label: item.name,
         value: item.id,
       }));
@@ -641,17 +641,17 @@ const ScheduleModal = () => {
       )}
 
       <FieldInput
-        label="Start Time"
-        value={schedule.startAt}
-        onChangeText={(startAt) =>
-          setSchedule((current) => ({ ...current, startAt }))
+        label="開始日期"
+        value={schedule.startDate}
+        onChangeText={(startDate) =>
+          setSchedule((current) => ({ ...current, startDate }))
         }
-        placeholder="2026-04-03T08:00:00.000Z"
+        placeholder="2026-04-03"
         disabled={!isEditable}
       />
 
       <FieldInput
-        label="Time Slots"
+        label="時段"
         value={schedule.timeSlotsText}
         onChangeText={(timeSlotsText) =>
           setSchedule((current) => ({
@@ -841,7 +841,7 @@ const ScheduleModal = () => {
         <View style={styles.summaryCard}>
           <ThemedText style={styles.summaryTitle}>Summary</ThemedText>
           <ThemedText style={styles.summaryText}>
-            Start Time: {schedule.startAt}
+            Start Time: {schedule.startDate}
           </ThemedText>
           <ThemedText style={styles.summaryText}>
             Time Slots: {schedule.timeSlotsText || "Not set"}

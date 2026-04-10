@@ -5,9 +5,9 @@ import { ScheduleEndType } from "@/types/domain";
 import { IDB_Schedule } from "@/types/db";
 import { ScheduleFormValues } from "@/types/schedule";
 
-export const parseTimeSlots = (value: string) =>
+export const parseTimeSlots = (value?: string) =>
   value
-    .split(",")
+    ?.split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -35,9 +35,9 @@ export const scheduleOccursOnDate = (
   schedule: IDB_Schedule,
   targetDate: dayjs.Dayjs,
 ) => {
-  const startAt = dayjs(schedule.startAt);
+  const startDate = dayjs(schedule.startDate);
   const targetDay = targetDate.startOf("day");
-  const startDay = startAt.startOf("day");
+  const startDay = startDate.startOf("day");
 
   if (targetDay.isBefore(startDay)) {
     return false;
@@ -62,7 +62,7 @@ export const scheduleOccursOnDate = (
       const weekdays =
         schedule.weekdays && schedule.weekdays.length > 0
           ? schedule.weekdays
-          : [startAt.day()];
+          : [startDate.day()];
       const diffDays = targetDay.diff(startDay, "day");
       const weekOffset = Math.floor(diffDays / 7);
 
@@ -76,7 +76,7 @@ export const scheduleOccursOnDate = (
         .startOf("month")
         .diff(startDay.startOf("month"), "month");
       return (
-        targetDay.date() === startAt.date() &&
+        targetDay.date() === startDate.date() &&
         diffMonths % interval === 0
       );
     }
@@ -85,8 +85,8 @@ export const scheduleOccursOnDate = (
         .startOf("year")
         .diff(startDay.startOf("year"), "year");
       return (
-        targetDay.date() === startAt.date() &&
-        targetDay.month() === startAt.month() &&
+        targetDay.date() === startDate.date() &&
+        targetDay.month() === startDate.month() &&
         diffYears % interval === 0
       );
     }
@@ -100,7 +100,7 @@ const countOccurrencesUntil = (
   targetDate: dayjs.Dayjs,
 ) => {
   let count = 0;
-  let cursor = dayjs(schedule.startAt).startOf("day");
+  let cursor = dayjs(schedule.startDate).startOf("day");
 
   while (
     cursor.isBefore(targetDate, "day") ||
@@ -147,8 +147,8 @@ export const toScheduleFormValues = (
   patientId: schedule.patientId,
   medicationId: schedule.medicationId,
   timezone: schedule.timezone,
-  startAt: schedule.startAt,
-  timeSlotsText: schedule.timeSlots.join(", "),
+  startDate: schedule.startDate,
+  timeSlotsText: schedule.timeSlots?.join(", "),
   amount: schedule.amount.toString(),
   doseUnit: schedule.doseUnit ?? "",
   frequencyUnit: schedule.frequencyUnit ?? "",
@@ -170,7 +170,7 @@ export const toSchedulePayload = (
     patientId: values.patientId,
     medicationId: values.medicationId,
     timezone: values.timezone,
-    startAt: values.startAt,
+    startDate: values.startDate,
     timeSlots: parseTimeSlots(values.timeSlotsText),
     amount: Number(values.amount) || 1,
     doseUnit: values.doseUnit || null,

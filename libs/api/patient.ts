@@ -205,54 +205,6 @@ export const fetchPatientHistories = async (
   return response.list.map(toHistoryResponse);
 };
 
-export const fetchPatientTodayEvents = async (
-  patientId: string,
-  date?: string,
-) => {
-  const targetDate = dayjs(date ?? undefined);
-  const [scheduleMatches, medications, histories] = await Promise.all([
-    getScheduleMatches({
-      patient_ids: [patientId],
-      from_date: targetDate.format("YYYY-MM-DD"),
-      to_date: targetDate.format("YYYY-MM-DD"),
-    }),
-    getMedicationList(patientId, {
-      page: 1,
-      page_size: DEFAULT_PAGE_SIZE,
-      sort_by: "created_at",
-      sort_order: "desc",
-    }),
-    fetchPatientHistories(patientId, targetDate.toISOString()),
-  ]);
-
-  return deriveEventsFromClientData({
-    schedules: scheduleMatches.list.map((item) => ({
-      id: item.id,
-      patientId: item.patient_id,
-      medicationId: item.medication_id,
-      timezone: item.timezone,
-      startDate: item.start_date,
-      timeSlots: item.time_slots ?? [],
-      amount: item.amount,
-      doseUnit: item.dose_unit,
-      frequencyUnit: item.frequency_unit,
-      interval: item.interval,
-      weekdays: item.weekdays,
-      endType: toDomainEndType(item.end_type),
-      untilDate: item.until_date,
-      occurrenceCount: item.occurrence_count,
-    })),
-    medications: medications.list.map((item) => ({
-      id: item.id,
-      patientId: item.patient_id,
-      name: item.name,
-      dosageForm: item.dosage_form,
-      memo: "",
-    })),
-    histories,
-    targetDate,
-  });
-};
 
 export const fetchCaregiverHistoryFeed = async (
   caregiverUserId: string,

@@ -9,7 +9,7 @@ export type ScheduleFormValues = {
   patientId: string;
   medicationId: string;
   timezone: string;
-  startAt: string;
+  startDate: string;
   timeSlotsText: string;
   amount: string;
   doseUnit: DoseUnit | "";

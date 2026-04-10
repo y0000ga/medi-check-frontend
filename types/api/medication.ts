@@ -1,6 +1,6 @@
 import { DosageForm } from "@/types/common";
 
-import { TPaginationParams } from "./base";
+import { IPaginationResponse, TPaginationParams } from "./base";
 import { PermissionLevel } from "./care-invitation";
 
 export interface IMedication {
@@ -46,3 +46,6 @@ export type TGetAllMedicationsParams = TPaginationParams & {
   dosage_form?: DosageForm | null;
   search?: string | null;
 };
+
+export type MedicationListResult = IPaginationResponse<IMedication>;
+
