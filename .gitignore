@@ -43,3 +43,7 @@ app-example
 /android
 
 NOTE.md
+
+.env
+.env.*
+!.env.example.env
