@@ -1,118 +1,80 @@
-import {
-  DOSE_UNIT_LABELS,
-  MEDICATION_DOSAGE_FORM,
-} from "@/constants/medication";
-import { EventItem } from "@/store/history";
-import { Medication } from "@/store/medication";
-import { DosageForm } from "@/types/common";
+export const formatDateToYYYYMMDD = (value: Date | string) => {
+  if (!value) return "未設定";
 
-import dayjs from "dayjs";
+  const date = new Date(value);
 
-export const evaluteStatus = ({
-  intakenTime,
-  scheduledTime,
-}: {
-  intakenTime?: string | null;
-  scheduledTime: string;
-}) => {
-  const now = dayjs();
-  const scheduledAt = dayjs(scheduledTime);
-  const isIntaken = Boolean(intakenTime);
-  const lastIntakeTime = scheduledAt.add(1, "hour");
-
-  let isOperable = false;
-  let isMissed = false;
-
-  // 未到時間
-  if (now.isBefore(scheduledAt)) {
-  }
-  // 已到時間，且仍在可服用時間內
-  else if (
-    now.isBefore(lastIntakeTime) ||
-    now.isSame(lastIntakeTime)
-  ) {
-    isOperable = true;
-  }
-  // 已逾時
-  else {
-    isMissed = true;
+  if (Number.isNaN(date.getTime())) {
+    return value.toString();
   }
 
-  return {
-    isIntaken,
-    isOperable,
-    isMissed,
-  };
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 };
 
-export const evaluateDosageFormIcon = ({
-  dosageForm,
-}: {
-  dosageForm: Medication["dosageForm"] | null;
-}) => {
-  let name = "local-hospital";
-  let color = "#3C83F6";
-  let backgroundColor = "#DBEAFE";
-  switch (dosageForm) {
-    case DosageForm.Spray:
-      name = "air";
-      color = "#FB923C";
-      backgroundColor = "#FFEDD5";
-      break;
-    case DosageForm.Liquid:
-      name = "water-drop";
-      color = "#10B981";
-      backgroundColor = "#D1FAE5";
-      break;
-    default:
-      break;
+export const formatDateTime = (value: string) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
   }
 
-  return {
-    name,
-    color,
-    backgroundColor,
-  };
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+
+  return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
 };
 
-export const evaluateLabel = ({
-  medicationDosageForm,
-  doseUnit,
-  amount,
-}: Pick<
-  EventItem,
-  "medicationDosageForm" | "doseUnit" | "amount"
->) => {
-  const list: string[] = [amount.toString()];
+export const parseDate = (value?: string | null) => {
+  const date = new Date(`${value}T00:00:00`);
 
-  if (doseUnit) {
-    list.push(DOSE_UNIT_LABELS[doseUnit]);
+  if (Number.isNaN(date.getTime())) {
+    return new Date();
   }
 
-  if (!doseUnit && medicationDosageForm) {
-    list.push(`單位${MEDICATION_DOSAGE_FORM[medicationDosageForm]}`);
-  }
-
-  if (!doseUnit && !medicationDosageForm) {
-    list.push("單位");
-  }
-
-  return {
-    label: list.join(" "),
-    icon: evaluateDosageFormIcon({
-      dosageForm: medicationDosageForm,
-    }),
-  };
+  return date;
 };
 
-export const createEnumOptions = <T extends Record<string, string>>(
-  enumObj: T,
-  label: Record<T[keyof T], string>,
-) => {
-  const values = Object.values(enumObj) as T[keyof T][];
+export const formatTime = (value: string) => {
+  const date = new Date(value);
 
-  return values.map((value) => ({
-    value,
-    label: label[value],
-  }));
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  const hh = String(date.getHours()).padStart(2, "0");
+  const min = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hh}:${min}`;
+};
+
+export const formatTimeSlot = (value: string) => {
+  if (/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(value)) {
+    return value.slice(0, 5);
+  }
+
+  return value;
+};
+
+export const formatTimeSlots = (values: string[]) => {
+  if (!values.length) return "未設定";
+  return values.map(formatTimeSlot).join("、");
+};
+
+export const formatScheduledTime = (value: string | Date) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.toString();
+  }
+
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return `${hours}:${minutes}`;
 };

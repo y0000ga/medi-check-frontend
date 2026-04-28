@@ -42,9 +42,4 @@ app-example
 /ios
 /android
 
-.env
-
-.vscode
-
-swagger.yaml
-doc
+NOTE.md
