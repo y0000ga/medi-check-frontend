@@ -58,8 +58,7 @@ npm run reset-project
 ```
 
 ## 文件索引
-
-- [產品使用說明](https://github.com/y0000ga/medi-check-frontend/blob/docs/usage-guide.md)
-- [開發與維護指南](https://github.com/y0000ga/medi-check-frontend/blob/docs/development-guide.md)
-- [API 對接指南](https://github.com/y0000ga/medi-check-frontend/blob/docs/api-integration-guide.md)
-- [專案結構說明](https://github.com/y0000ga/medi-check-frontend/blob/docs/project-structure.md)
+- [產品使用說明](https://github.com/y0000ga/medi-check-frontend/blob/main/docs/usage-guide.md)
+- [開發與維護指南](https://github.com/y0000ga/medi-check-frontend/blob/main/docs/development-guide.md)
+- [API 對接指南](https://github.com/y0000ga/medi-check-frontend/blob/main/docs/api-integration-guide.md)
+- [專案結構說明](https://github.com/y0000ga/medi-check-frontend/blob/main/docs/project-structure.md)
