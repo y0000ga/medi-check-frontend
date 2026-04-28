@@ -9,9 +9,3 @@ export enum HistoryStatus {
   taken = "taken",
   missed = "missed",
 }
-
-export enum HistorySource {
-  manual = "manual",
-  quickCheck = "quickCheck",
-  system = "system",
-}

@@ -1,4 +1,4 @@
-import { ICreateInvitationBody } from "@/types/api/care-invitation";
+import { ICreateInvitationBody } from "@/store/care-invitation/type";
 import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
 
 export const createInvtationSchema = (

@@ -1,24 +1,27 @@
-import { Pressable, StyleSheet, View } from "react-native";
-import { useEffect, useMemo, useState } from "react";
 import {
   Redirect,
   useLocalSearchParams,
   useRouter,
 } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, View } from "react-native";
 
+import { scheduleStyles } from "@/components/schedule/index.style";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import Container from "@/components/ui/container";
 import FieldInput from "@/components/ui/field-input";
 import FieldPicker from "@/components/ui/field-picker";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import Header from "@/components/ui/header";
-import ModalHeader from "@/components/ui/modal-header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
+import ModalHeader from "@/components/ui/modal-header";
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 import { DOSE_UNIT_LABELS } from "@/constants/medication";
 import { routes } from "@/constants/route";
 import {
   BUTTON_BY_ACTION,
+  CREATE_STEPS,
   DEFAULT_SCHEDULE_FORM,
   DOSE_UNIT_OPTIONS,
   END_TYPE_LABEL,
@@ -27,19 +30,18 @@ import {
   TITLE_BY_ACTION,
   WEEKDAY_OPTIONS,
 } from "@/constants/schedule";
-import { fetchMedicationsByPatient } from "@/libs/api/medication";
+import { useGetMedicationsByPatientQuery } from "@/store/medication/api";
 import {
-  fetchPatientOptions,
-  getPatientList,
   PatientPickerOption,
-} from "@/libs/api/patient";
+  useGetPatientListQuery,
+  useGetPatientOptionsQuery,
+} from "@/store/patient/api";
 import {
-  createSchedule,
-  deleteSchedule,
-  fetchScheduleDetail,
-  updateSchedule,
-} from "@/libs/api/schedule";
-import { useViewerStore } from "@/stores/viewer";
+  useCreateMedicationScheduleMutation,
+  useGetScheduleDetailQuery,
+  useRemoveScheduleMutation,
+  useEditScheduleMutation,
+} from "@/store/schedule/api";
 import {
   Action,
   DoseUnit,
@@ -51,13 +53,6 @@ import {
   toScheduleFormValues,
   toSchedulePayload,
 } from "@/utils/schedule";
-import { DEFAULT_PAGE_SIZE } from "@/constants/common";
-
-const CREATE_STEPS = [
-  "Select patient",
-  "Select medication",
-  "Schedule details",
-] as const;
 
 const ScheduleModal = () => {
   const router = useRouter();
@@ -68,212 +63,98 @@ const ScheduleModal = () => {
   const action = (params.action ?? Action.Info) as Action;
   const id = typeof params.id === "string" ? params.id : "";
 
-  const isInfo = action === Action.Info;
   const isCreate = action === Action.Create;
   const isEditable =
     action === Action.Create || action === Action.Edit;
   const isWizardMode = action !== Action.Info;
 
-  const viewerMode = useViewerStore((state) => state.mode);
-  const viewerOwnPatient = useViewerStore(
-    (state) => state.ownPatient,
-  );
-  const viewerSelectedPatientId = useViewerStore(
-    (state) => state.selectedPatientId,
-  );
-
   const [schedule, setSchedule] = useState(DEFAULT_SCHEDULE_FORM);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
-  const [patientOptions, setPatientOptions] = useState<
-    PatientPickerOption[]
-  >([]);
-  const [patientPageItems, setPatientPageItems] = useState<
-    PatientPickerOption[]
-  >([]);
   const [patientPage, setPatientPage] = useState(1);
-  const [patientTotalPages, setPatientTotalPages] = useState(1);
-  const [patientListLoading, setPatientListLoading] = useState(false);
   const [patientFilter, setPatientFilter] = useState("");
   const [medicationFilter, setMedicationFilter] = useState("");
-  const [medicationOptions, setMedicationOptions] = useState<
-    { label: string; value: string }[]
-  >([]);
 
-  useEffect(() => {
-    let active = true;
+  const patientOptionsQuery = useGetPatientOptionsQuery();
+  const patientOptions: PatientPickerOption[] =
+    patientOptionsQuery.data?.list ?? [];
 
-    const loadPatients = async () => {
-      const options = await fetchPatientOptions();
-
-      if (!active) {
-        return;
-      }
-
-      setPatientOptions(options);
-
-      if (!isWizardMode) {
-        setSchedule((current) => {
-          if (current.patientId) {
-            return current;
-          }
-
-          const defaultPatientId =
-            viewerMode === "caregiver"
-              ? (viewerSelectedPatientId ?? options[0]?.value ?? "")
-              : (viewerOwnPatient?.id ?? options[0]?.value ?? "");
-
-          return {
-            ...current,
-            patientId: defaultPatientId,
-          };
-        });
-      }
-    };
-
-    loadPatients();
-
-    return () => {
-      active = false;
-    };
-  }, [
-    isWizardMode,
-    viewerMode,
-    viewerOwnPatient?.id,
-    viewerSelectedPatientId,
-  ]);
-
-  useEffect(() => {
-    let active = true;
-
-    const loadPatientPage = async () => {
-      if (!isWizardMode) {
-        return;
-      }
-
-      setPatientListLoading(true);
-      try {
-        const response = await getPatientList({
-          page: patientPage,
-          page_size: DEFAULT_PAGE_SIZE,
-          sort_by: "created_at",
-          sort_order: "desc",
-          search: patientFilter || null,
-        });
-
-        if (!active) {
-          return;
-        }
-
-        const items = response.list.map((patient) => ({
-          label: patient.name,
-          value: patient.id,
-          avatarUrl: patient.avatar_url,
-          permissionLevel: patient.permission_level,
-        }));
-
-        setPatientPageItems(items);
-        setPatientTotalPages(
-          Math.max(1, Math.ceil(response.total_size / DEFAULT_PAGE_SIZE)),
-        );
-        setSchedule((current) => {
-          if (
-            current.patientId &&
-            (items.some((item) => item.value === current.patientId) ||
-              current.patientId === viewerSelectedPatientId ||
-              current.patientId === viewerOwnPatient?.id)
-          ) {
-            return current;
-          }
-
-          const preferredPatientId =
-            viewerMode === "caregiver"
-              ? viewerSelectedPatientId
-              : viewerOwnPatient?.id;
-
-          return {
-            ...current,
-            patientId:
-              items.find((item) => item.value === preferredPatientId)
-                ?.value ??
-              items[0]?.value ??
-              "",
-          };
-        });
-      } finally {
-        if (active) {
-          setPatientListLoading(false);
-        }
-      }
-    };
-
-    loadPatientPage();
-
-    return () => {
-      active = false;
-    };
-  }, [
-    isWizardMode,
-    patientPage,
-    patientFilter,
-    viewerMode,
-    viewerOwnPatient?.id,
-    viewerSelectedPatientId,
-  ]);
+  const patientListQuery = useGetPatientListQuery(
+    {
+      page: patientPage,
+      page_size: DEFAULT_PAGE_SIZE,
+      sort_by: "created_at",
+      sort_order: "desc",
+      search: patientFilter || null,
+    },
+    { skip: !isWizardMode },
+  );
+  const patientPageItems: PatientPickerOption[] = useMemo(
+    () =>
+      (patientListQuery.data?.list ?? []).map((patient) => ({
+        label: patient.name,
+        value: patient.id,
+        avatarUrl: patient.avatar_url,
+        permissionLevel: patient.permission_level,
+      })),
+    [patientListQuery.data?.list],
+  );
+  const patientTotalPages = Math.max(
+    1,
+    Math.ceil(
+      (patientListQuery.data?.total_size ?? 0) / DEFAULT_PAGE_SIZE,
+    ),
+  );
 
   useEffect(() => {
     setPatientPage(1);
   }, [patientFilter]);
 
-  useEffect(() => {
-    let active = true;
+  const medicationsQuery = useGetMedicationsByPatientQuery(
+    {
+      patientId: schedule.patientId,
+      params: {
+        page: 1,
+        page_size: 20,
+        sort_by: "created_at",
+        sort_order: "desc",
+        search: medicationFilter.trim() || null,
+      },
+    },
+    { skip: !schedule.patientId },
+  );
 
-    const loadMedications = async () => {
-      if (!schedule.patientId) {
-        setMedicationOptions([]);
-        return;
-      }
-
-      const medications = await fetchMedicationsByPatient(
-        schedule.patientId,
-        medicationFilter,
-      );
-
-      if (!active) {
-        return;
-      }
-
-      const nextOptions = medications.list.map((item) => ({
+  const medicationOptions = useMemo(
+    () =>
+      (medicationsQuery.data?.list ?? []).map((item) => ({
         label: item.name,
         value: item.id,
-      }));
+      })),
+    [medicationsQuery.data?.list],
+  );
 
-      setMedicationOptions(nextOptions);
-      setSchedule((current) => {
-        if (
-          current.medicationId &&
-          nextOptions.some(
-            (item) => item.value === current.medicationId,
-          )
-        ) {
-          return current;
-        }
+  useEffect(() => {
+    if (!schedule.patientId) {
+      return;
+    }
 
-        return {
-          ...current,
-          medicationId: nextOptions[0]?.value ?? "",
-        };
-      });
-    };
+    setSchedule((current) => {
+      if (
+        current.medicationId &&
+        medicationOptions.some(
+          (item) => item.value === current.medicationId,
+        )
+      ) {
+        return current;
+      }
 
-    loadMedications();
-
-    return () => {
-      active = false;
-    };
-  }, [medicationFilter, schedule.patientId]);
+      return {
+        ...current,
+        medicationId: medicationOptions[0]?.value ?? "",
+      };
+    });
+  }, [medicationOptions, schedule.patientId]);
 
   useEffect(() => {
     setMedicationFilter("");
@@ -293,31 +174,21 @@ const ScheduleModal = () => {
       return;
     }
 
-    let active = true;
-
-    const loadSchedule = async () => {
-      setLoading(true);
-      try {
-        const detail = await fetchScheduleDetail(id);
-
-        if (!active) {
-          return;
-        }
-
-        setSchedule(toScheduleFormValues(detail));
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadSchedule();
-
-    return () => {
-      active = false;
-    };
+    // noop, handled by query below
   }, [id, isCreate]);
+  const scheduleDetailQuery = useGetScheduleDetailQuery(id, {
+    skip: isCreate || !id,
+  });
+  const [createMedicationSchedule] =
+    useCreateMedicationScheduleMutation();
+  const [editSchedule] = useEditScheduleMutation();
+  const [removeSchedule] = useRemoveScheduleMutation();
+
+  useEffect(() => {
+    if (scheduleDetailQuery.data) {
+      setSchedule(toScheduleFormValues(scheduleDetailQuery.data));
+    }
+  }, [scheduleDetailQuery.data]);
 
   const selectedPatient = useMemo(
     () =>
@@ -358,12 +229,44 @@ const ScheduleModal = () => {
     setError("");
     setSaving(true);
     try {
+      console.log(schedule);
       const payload = toSchedulePayload(schedule);
+      console.log(payload);
 
       if (isCreate) {
-        await createSchedule(payload);
+        await createMedicationSchedule({
+          medicationId: payload.medicationId,
+          body: {
+            timezone: payload.timezone,
+            start_date: payload.startDate,
+            time_slots: payload.timeSlots,
+            amount: payload.amount,
+            dose_unit: payload.doseUnit,
+            frequency_unit: payload.frequencyUnit,
+            interval: payload.interval,
+            weekdays: payload.weekdays,
+            end_type: payload.endType || null,
+            until_date: payload.untilDate,
+            occurrence_count: payload.occurrenceCount,
+          },
+        }).unwrap();
       } else if (id) {
-        await updateSchedule(id, payload);
+        await editSchedule({
+          scheduleId: id,
+          body: {
+            timezone: payload.timezone,
+            start_date: payload.startDate,
+            time_slots: payload.timeSlots,
+            amount: payload.amount,
+            dose_unit: payload.doseUnit,
+            frequency_unit: payload.frequencyUnit,
+            interval: payload.interval,
+            weekdays: payload.weekdays,
+            end_type: payload.endType || null,
+            until_date: payload.untilDate,
+            occurrence_count: payload.occurrenceCount,
+          },
+        }).unwrap();
       }
 
       router.back();
@@ -379,7 +282,7 @@ const ScheduleModal = () => {
 
     setSaving(true);
     try {
-      await deleteSchedule(id);
+      await removeSchedule(id).unwrap();
       router.back();
     } finally {
       setSaving(false);
@@ -390,9 +293,9 @@ const ScheduleModal = () => {
 
   const renderPatientSelection = () => (
     <>
-      <View style={styles.stepHeader}>
+      <View style={scheduleStyles.stepHeader}>
         <ThemedText type="subtitle">Step 1 of 3</ThemedText>
-        <ThemedText style={styles.stepDescription}>
+        <ThemedText style={scheduleStyles.stepDescription}>
           Pick the patient first, then we can narrow medications to
           the right person.
         </ThemedText>
@@ -412,8 +315,8 @@ const ScheduleModal = () => {
             <Pressable
               key={patient.value}
               style={[
-                styles.selectionCard,
-                selected && styles.selectionCardSelected,
+                scheduleStyles.selectionCard,
+                selected && scheduleStyles.selectionCardSelected,
               ]}
               onPress={() => {
                 setSchedule((current) => ({
@@ -424,11 +327,11 @@ const ScheduleModal = () => {
                 setError("");
               }}
             >
-              <View style={styles.selectionCardContent}>
-                <ThemedText style={styles.selectionTitle}>
+              <View style={scheduleStyles.selectionCardContent}>
+                <ThemedText style={scheduleStyles.selectionTitle}>
                   {patient.label}
                 </ThemedText>
-                <ThemedText style={styles.selectionMeta}>
+                <ThemedText style={scheduleStyles.selectionMeta}>
                   Permission: {patient.permissionLevel}
                 </ThemedText>
               </View>
@@ -443,41 +346,42 @@ const ScheduleModal = () => {
           );
         })
       ) : (
-        <View style={styles.emptyState}>
-          <ThemedText style={styles.emptyStateTitle}>
+        <View style={scheduleStyles.emptyState}>
+          <ThemedText style={scheduleStyles.emptyStateTitle}>
             No patients found on this page
           </ThemedText>
-          <ThemedText style={styles.emptyStateText}>
+          <ThemedText style={scheduleStyles.emptyStateText}>
             Try a different keyword or move to another page.
           </ThemedText>
         </View>
       )}
 
-      <View style={styles.paginationRow}>
+      <View style={scheduleStyles.paginationRow}>
         <Pressable
           style={[
-            styles.secondaryButton,
-            patientPage === 1 && styles.disabledButton,
+            scheduleStyles.secondaryButton,
+            patientPage === 1 && scheduleStyles.disabledButton,
           ]}
           onPress={() => setPatientPage((current) => current - 1)}
           disabled={patientPage === 1}
         >
-          <ThemedText style={styles.secondaryButtonText}>
+          <ThemedText style={scheduleStyles.secondaryButtonText}>
             Previous
           </ThemedText>
         </Pressable>
-        <ThemedText style={styles.paginationText}>
+        <ThemedText style={scheduleStyles.paginationText}>
           Page {patientPage} / {patientTotalPages}
         </ThemedText>
         <Pressable
           style={[
-            styles.secondaryButton,
-            patientPage >= patientTotalPages && styles.disabledButton,
+            scheduleStyles.secondaryButton,
+            patientPage >= patientTotalPages &&
+              scheduleStyles.disabledButton,
           ]}
           onPress={() => setPatientPage((current) => current + 1)}
           disabled={patientPage >= patientTotalPages}
         >
-          <ThemedText style={styles.secondaryButtonText}>
+          <ThemedText style={scheduleStyles.secondaryButtonText}>
             Next
           </ThemedText>
         </Pressable>
@@ -487,19 +391,19 @@ const ScheduleModal = () => {
 
   const renderMedicationSelection = () => (
     <>
-      <View style={styles.stepHeader}>
+      <View style={scheduleStyles.stepHeader}>
         <ThemedText type="subtitle">Step 2 of 3</ThemedText>
-        <ThemedText style={styles.stepDescription}>
+        <ThemedText style={scheduleStyles.stepDescription}>
           Choose one medication under{" "}
           {selectedPatient?.label ?? "the selected patient"}.
         </ThemedText>
       </View>
 
-      <View style={styles.selectedSummary}>
-        <ThemedText style={styles.summaryLabel}>
+      <View style={scheduleStyles.selectedSummary}>
+        <ThemedText style={scheduleStyles.summaryLabel}>
           Selected patient
         </ThemedText>
-        <ThemedText style={styles.summaryValue}>
+        <ThemedText style={scheduleStyles.summaryValue}>
           {selectedPatient?.label ?? "Not selected"}
         </ThemedText>
       </View>
@@ -518,8 +422,8 @@ const ScheduleModal = () => {
             <Pressable
               key={medication.value}
               style={[
-                styles.selectionCard,
-                selected && styles.selectionCardSelected,
+                scheduleStyles.selectionCard,
+                selected && scheduleStyles.selectionCardSelected,
               ]}
               onPress={() => {
                 setSchedule((current) => ({
@@ -529,7 +433,7 @@ const ScheduleModal = () => {
                 setError("");
               }}
             >
-              <ThemedText style={styles.selectionTitle}>
+              <ThemedText style={scheduleStyles.selectionTitle}>
                 {medication.label}
               </ThemedText>
               {selected ? (
@@ -543,11 +447,11 @@ const ScheduleModal = () => {
           );
         })
       ) : (
-        <View style={styles.emptyState}>
-          <ThemedText style={styles.emptyStateTitle}>
+        <View style={scheduleStyles.emptyState}>
+          <ThemedText style={scheduleStyles.emptyStateTitle}>
             No medications yet
           </ThemedText>
-          <ThemedText style={styles.emptyStateText}>
+          <ThemedText style={scheduleStyles.emptyStateText}>
             Create a medication for this patient first, then come back
             to add the schedule.
           </ThemedText>
@@ -559,9 +463,9 @@ const ScheduleModal = () => {
   const renderForm = (showPickers: boolean) => (
     <>
       {isWizardMode ? (
-        <View style={styles.stepHeader}>
+        <View style={scheduleStyles.stepHeader}>
           <ThemedText type="subtitle">Step 3 of 3</ThemedText>
-          <ThemedText style={styles.stepDescription}>
+          <ThemedText style={scheduleStyles.stepDescription}>
             Set up the schedule details for the selected medication.
           </ThemedText>
         </View>
@@ -620,20 +524,20 @@ const ScheduleModal = () => {
         </>
       ) : (
         <>
-          <View style={styles.selectedSummary}>
-            <ThemedText style={styles.summaryLabel}>
+          <View style={scheduleStyles.selectedSummary}>
+            <ThemedText style={scheduleStyles.summaryLabel}>
               Selected patient
             </ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText style={scheduleStyles.summaryValue}>
               {selectedPatient?.label ?? "Not selected"}
             </ThemedText>
           </View>
 
-          <View style={styles.selectedSummary}>
-            <ThemedText style={styles.summaryLabel}>
+          <View style={scheduleStyles.selectedSummary}>
+            <ThemedText style={scheduleStyles.summaryLabel}>
               Selected medication
             </ThemedText>
-            <ThemedText style={styles.summaryValue}>
+            <ThemedText style={scheduleStyles.summaryValue}>
               {selectedMedicationLabel || "Not selected"}
             </ThemedText>
           </View>
@@ -708,7 +612,7 @@ const ScheduleModal = () => {
               interval: frequencyUnit ? current.interval || "1" : "1",
               endType: frequencyUnit
                 ? current.endType || ScheduleEndType.never
-                : "",
+                : null,
               untilDate: frequencyUnit ? current.untilDate : "",
               occurrenceCount: frequencyUnit
                 ? current.occurrenceCount
@@ -747,11 +651,11 @@ const ScheduleModal = () => {
       ) : null}
 
       {schedule.frequencyUnit === FrequencyUnit.Week ? (
-        <View style={styles.weekdaySection}>
-          <ThemedText style={styles.sectionLabel}>
+        <View style={scheduleStyles.weekdaySection}>
+          <ThemedText style={scheduleStyles.sectionLabel}>
             Weekdays
           </ThemedText>
-          <View style={styles.weekdayRow}>
+          <View style={scheduleStyles.weekdayRow}>
             {WEEKDAY_OPTIONS.map((option) => {
               const selected = schedule.weekdays.includes(
                 option.value,
@@ -761,8 +665,8 @@ const ScheduleModal = () => {
                 <Pressable
                   key={option.value}
                   style={[
-                    styles.weekdayChip,
-                    selected && styles.weekdayChipSelected,
+                    scheduleStyles.weekdayChip,
+                    selected && scheduleStyles.weekdayChipSelected,
                   ]}
                   onPress={() =>
                     isEditable && toggleWeekday(option.value)
@@ -771,8 +675,9 @@ const ScheduleModal = () => {
                 >
                   <ThemedText
                     style={[
-                      styles.weekdayChipText,
-                      selected && styles.weekdayChipTextSelected,
+                      scheduleStyles.weekdayChipText,
+                      selected &&
+                        scheduleStyles.weekdayChipTextSelected,
                     ]}
                   >
                     {option.label}
@@ -838,28 +743,30 @@ const ScheduleModal = () => {
       ) : null}
 
       {!isEditable ? (
-        <View style={styles.summaryCard}>
-          <ThemedText style={styles.summaryTitle}>Summary</ThemedText>
-          <ThemedText style={styles.summaryText}>
+        <View style={scheduleStyles.summaryCard}>
+          <ThemedText style={scheduleStyles.summaryTitle}>
+            Summary
+          </ThemedText>
+          <ThemedText style={scheduleStyles.summaryText}>
             Start Time: {schedule.startDate}
           </ThemedText>
-          <ThemedText style={styles.summaryText}>
+          <ThemedText style={scheduleStyles.summaryText}>
             Time Slots: {schedule.timeSlotsText || "Not set"}
           </ThemedText>
-          <ThemedText style={styles.summaryText}>
+          <ThemedText style={scheduleStyles.summaryText}>
             Amount: {schedule.amount}{" "}
             {DOSE_UNIT_OPTIONS.find(
               (option) => option.value === schedule.doseUnit,
             )?.label ?? ""}
           </ThemedText>
-          <ThemedText style={styles.summaryText}>
+          <ThemedText style={scheduleStyles.summaryText}>
             Frequency:{" "}
             {FREQUENCY_OPTIONS.find(
               (option) => option.value === schedule.frequencyUnit,
             )?.label ?? "One time"}
           </ThemedText>
           {payload.weekdays?.length ? (
-            <ThemedText style={styles.summaryText}>
+            <ThemedText style={scheduleStyles.summaryText}>
               Weekdays:{" "}
               {payload.weekdays
                 .map(
@@ -879,13 +786,19 @@ const ScheduleModal = () => {
   return (
     <>
       <FullScreenLoading
-        visible={loading || saving || patientListLoading}
+        visible={
+          saving ||
+          medicationsQuery.isFetching ||
+          patientListQuery.isFetching ||
+          patientOptionsQuery.isFetching ||
+          scheduleDetailQuery.isFetching
+        }
       />
-      <ThemedView style={styles.container}>
+      <ThemedView style={scheduleStyles.container}>
         <ModalHeader
           title={TITLE_BY_ACTION[action]}
           leftIcon={
-            isInfo ? (
+            !isWizardMode ? (
               <Pressable
                 onPress={() =>
                   router.push(routes.protected.modal.editSchedule(id))
@@ -912,31 +825,33 @@ const ScheduleModal = () => {
             : null}
 
           {error ? (
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
+            <ThemedText style={scheduleStyles.errorText}>
+              {error}
+            </ThemedText>
           ) : null}
         </Container>
         <Header>
           {isWizardMode ? (
-            <View style={styles.wizardFooter}>
+            <View style={scheduleStyles.wizardFooter}>
               {stepIndex > 0 ? (
                 <Pressable
-                  style={styles.secondaryFooterButton}
+                  style={scheduleStyles.secondaryFooterButton}
                   onPress={() =>
                     setStepIndex((current) => current - 1)
                   }
                 >
                   <ThemedText
-                    style={styles.secondaryFooterButtonText}
+                    style={scheduleStyles.secondaryFooterButtonText}
                   >
                     Back
                   </ThemedText>
                 </Pressable>
               ) : (
-                <View style={styles.footerSpacer} />
+                <View style={scheduleStyles.footerSpacer} />
               )}
 
               <Pressable
-                style={styles.primaryButton}
+                style={scheduleStyles.primaryButton}
                 onPress={() => {
                   if (stepIndex === 0) {
                     if (!schedule.patientId) {
@@ -963,7 +878,7 @@ const ScheduleModal = () => {
                   handleSave();
                 }}
               >
-                <ThemedText style={styles.primaryButtonText}>
+                <ThemedText style={scheduleStyles.primaryButtonText}>
                   {stepIndex === CREATE_STEPS.length - 1
                     ? BUTTON_BY_ACTION[action]
                     : "Continue"}
@@ -972,19 +887,19 @@ const ScheduleModal = () => {
             </View>
           ) : isEditable ? (
             <Pressable
-              style={styles.primaryButton}
+              style={scheduleStyles.primaryButton}
               onPress={handleSave}
             >
-              <ThemedText style={styles.primaryButtonText}>
+              <ThemedText style={scheduleStyles.primaryButtonText}>
                 {BUTTON_BY_ACTION[action]}
               </ThemedText>
             </Pressable>
           ) : (
             <Pressable
-              style={styles.deleteButton}
+              style={scheduleStyles.deleteButton}
               onPress={handleDelete}
             >
-              <ThemedText style={styles.deleteButtonText}>
+              <ThemedText style={scheduleStyles.deleteButtonText}>
                 {BUTTON_BY_ACTION[action]}
               </ThemedText>
             </Pressable>
@@ -996,198 +911,3 @@ const ScheduleModal = () => {
 };
 
 export default ScheduleModal;
-
-const styles = StyleSheet.create({
-  container: {
-    width: "100%",
-    flex: 1,
-  },
-  primaryButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#3C83F6",
-  },
-  primaryButtonText: {
-    color: "white",
-    width: "100%",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  deleteButton: {
-    width: "100%",
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#EF4444",
-  },
-  deleteButtonText: {
-    color: "white",
-    width: "100%",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  weekdaySection: {
-    gap: 8,
-  },
-  sectionLabel: {
-    color: "#334155",
-  },
-  weekdayRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  weekdayChip: {
-    minWidth: 38,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "#F1F5F9",
-    alignItems: "center",
-  },
-  weekdayChipSelected: {
-    backgroundColor: "#DBEAFE",
-  },
-  weekdayChipText: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-  weekdayChipTextSelected: {
-    color: "#2563EB",
-  },
-  summaryCard: {
-    backgroundColor: "#F8FAFC",
-    borderRadius: 12,
-    padding: 16,
-    gap: 8,
-  },
-  summaryTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  summaryText: {
-    color: "#475569",
-  },
-  errorText: {
-    color: "#DC2626",
-    lineHeight: 20,
-  },
-  stepHeader: {
-    gap: 4,
-  },
-  stepDescription: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  selectionCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: "#FFFFFF",
-  },
-  selectionCardSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  selectionCardContent: {
-    flex: 1,
-    gap: 4,
-  },
-  selectionTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  selectionMeta: {
-    color: "#64748B",
-  },
-  filterSection: {
-    gap: 8,
-  },
-  filterLabel: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-  filterInput: {
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: "#0F172A",
-  },
-  paginationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-  },
-  secondaryButtonText: {
-    color: "#334155",
-    fontWeight: "600",
-  },
-  paginationText: {
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  emptyState: {
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: "#F8FAFC",
-    gap: 6,
-  },
-  emptyStateTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  emptyStateText: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  selectedSummary: {
-    borderRadius: 12,
-    backgroundColor: "#F8FAFC",
-    padding: 16,
-    gap: 4,
-  },
-  summaryLabel: {
-    color: "#64748B",
-  },
-  summaryValue: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  wizardFooter: {
-    width: "100%",
-    flexDirection: "row",
-    gap: 12,
-  },
-  secondaryFooterButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-  },
-  secondaryFooterButtonText: {
-    color: "#334155",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  footerSpacer: {
-    flex: 1,
-  },
-});

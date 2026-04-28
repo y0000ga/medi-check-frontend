@@ -1,198 +1,103 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Redirect, useRouter } from "expo-router";
-import { useRoute } from "@react-navigation/native";
+import { Pressable, View } from "react-native";
 
+import { medicationStyles } from "@/components/medication/index.style";
+import { ThemedText } from "@/components/themed-text";
+import { ThemedView } from "@/components/themed-view";
 import Container from "@/components/ui/container";
 import FieldInput from "@/components/ui/field-input";
 import FieldPicker from "@/components/ui/field-picker";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import Header from "@/components/ui/header";
-import ModalHeader from "@/components/ui/modal-header";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
-import { MEDICATION_DOSAGE_FORM } from "@/constants/medication";
+import ModalHeader from "@/components/ui/modal-header";
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
+import {
+  ACTION_BUTTON,
+  ACTION_TITLE,
+  CREATE_STEPS,
+  EMPTY_MEDICATION,
+  MEDICATION_DOSAGE_FORM,
+} from "@/constants/medication";
 import { routes } from "@/constants/route";
 import {
-  getPatientList,
   PatientPickerOption,
-} from "@/libs/api/patient";
-import { useMedicationStore } from "@/stores/medication";
-import { useUserStore } from "@/stores/user";
-import { useViewerStore } from "@/stores/viewer";
+  useGetPatientListQuery,
+} from "@/store/patient/api";
+import {
+  mapMedicationToFormValues,
+  useCreateMedicationMutation,
+  useDeleteMedicationMutation,
+  useGetMedicationDetailQuery,
+  useUpdateMedicationMutation,
+} from "@/store/medication";
+
 import { Action, DosageForm } from "@/types/common";
-import { IRES_Medication } from "@/types/api";
-import { DEFAULT_PAGE_SIZE } from "@/constants/common";
-
-const TITLE: Record<Action, string> = {
-  [Action.Create]: "Create Medication",
-  [Action.Edit]: "Edit Medication",
-  [Action.Info]: "Medication Detail",
-};
-
-const BUTTON: Record<Action, string> = {
-  [Action.Create]: "Create",
-  [Action.Edit]: "Save",
-  [Action.Info]: "Delete Medication",
-};
-
-const EMPTY_MEDICATION: IRES_Medication = {
-  id: "",
-  patientId: "",
-  name: "",
-  dosageForm: DosageForm.Capsule,
-  memo: "",
-};
-
-const CREATE_STEPS = [
-  "Select patient",
-  "Medication details",
-] as const;
-
 
 const MedicationModal = () => {
   const router = useRouter();
-  const { params } = useRoute();
-  const { action, id } = params as { action: Action; id?: string };
+  const params = useLocalSearchParams<{
+    action?: string;
+    id?: string;
+  }>();
+  const action = (params.action ?? Action.Info) as Action;
+  const id = typeof params.id === "string" ? params.id : "";
 
-  const userLoading = useUserStore(
-    (state) => state.isLoading.length > 0,
-  );
-  const viewerMode = useViewerStore((state) => state.mode);
-  const viewerOwnPatient = useViewerStore(
-    (state) => state.ownPatient,
-  );
-  const viewerSelectedPatientId = useViewerStore(
-    (state) => state.selectedPatientId,
-  );
 
-  const addMedication = useMedicationStore(
-    (state) => state.addMedication,
-  );
-  const editMedication = useMedicationStore(
-    (state) => state.editMedication,
-  );
-  const removeMedication = useMedicationStore(
-    (state) => state.removeMedication,
-  );
-  const loadMedicationDetail = useMedicationStore(
-    (state) => state.loadMedicationDetail,
-  );
-  const selectedMedication = useMedicationStore(
-    (state) => state.selectedMedication,
-  );
-  const medicationLoading = useMedicationStore(
-    (state) => state.isLoading.length > 0,
-  );
-
-  const [medication, setMedication] = useState<IRES_Medication>({
-    ...EMPTY_MEDICATION,
-    id: id ?? "",
+  const [createMedication, createState] =
+    useCreateMedicationMutation();
+  const [updateMedication, updateState] =
+    useUpdateMedicationMutation();
+  const [deleteMedication, deleteState] =
+    useDeleteMedicationMutation();
+  const medicationDetailQuery = useGetMedicationDetailQuery(id, {
+    skip: action === Action.Create || !id,
   });
-  const [patientOptions, setPatientOptions] = useState<
-    PatientPickerOption[]
-  >([]);
-  const [patientPageItems, setPatientPageItems] = useState<
-    PatientPickerOption[]
-  >([]);
+
+  const [medication, setMedication] = useState(EMPTY_MEDICATION);
   const [patientPage, setPatientPage] = useState(1);
-  const [patientTotalPages, setPatientTotalPages] = useState(1);
-  const [patientListLoading, setPatientListLoading] = useState(false);
   const [patientFilter, setPatientFilter] = useState("");
   const [stepIndex, setStepIndex] = useState(0);
   const [error, setError] = useState("");
 
   const isInfoMode = action === Action.Info;
-  const isWizardMode = action !== Action.Info;
-
-  useEffect(() => {
-    let active = true;
-
-    const loadOptions = async () => {
-      setPatientListLoading(true);
-      try {
-        const response = await getPatientList({
-          page: patientPage,
-          page_size: DEFAULT_PAGE_SIZE,
-          sort_by: "created_at",
-          sort_order: "desc",
-          search: patientFilter || null,
-        });
-
-        if (!active) {
-          return;
-        }
-
-        const options = response.list.map((patient) => ({
-          label: patient.name,
-          value: patient.id,
-          avatarUrl: patient.avatar_url,
-          permissionLevel: patient.permission_level,
-        }));
-
-        setPatientOptions(options);
-        setPatientPageItems(options);
-        setPatientTotalPages(
-          Math.max(1, Math.ceil(response.total_size / DEFAULT_PAGE_SIZE)),
-        );
-
-        setMedication((current) => {
-          if (current.patientId) {
-            return current;
-          }
-
-          const defaultPatientId =
-            viewerMode === "caregiver"
-              ? (viewerSelectedPatientId ?? options[0]?.value ?? "")
-              : (viewerOwnPatient?.id ?? options[0]?.value ?? "");
-
-          return {
-            ...current,
-            patientId: defaultPatientId,
-          };
-        });
-      } finally {
-        if (active) {
-          setPatientListLoading(false);
-        }
-      }
-    };
-
-    loadOptions();
-
-    return () => {
-      active = false;
-    };
-  }, [
-    patientPage,
-    viewerMode,
-    viewerOwnPatient?.id,
-    viewerSelectedPatientId,
-    patientFilter,
-  ]);
+  const patientListQuery = useGetPatientListQuery({
+    page: patientPage,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "created_at",
+    sort_order: "desc",
+    search: patientFilter || null,
+  });
+  const patientOptions: PatientPickerOption[] = useMemo(
+    () =>
+      (patientListQuery.data?.list ?? []).map((patient) => ({
+        label: patient.name,
+        value: patient.id,
+        avatarUrl: patient.avatar_url,
+        permissionLevel: patient.permission_level,
+      })),
+    [patientListQuery.data?.list],
+  );
+  const patientPageItems = patientOptions;
+  const patientTotalPages = Math.max(
+    1,
+    Math.ceil(
+      (patientListQuery.data?.total_size ?? 0) / DEFAULT_PAGE_SIZE,
+    ),
+  );
 
   useEffect(() => {
     setPatientPage(1);
   }, [patientFilter]);
 
   useEffect(() => {
-    if (action === Action.Create || !id) {
+    if (!medicationDetailQuery.data) {
       return;
     }
 
-    console.log("here");
-
-    loadMedicationDetail(id);
-  }, [action, id, loadMedicationDetail]);
-
-  useEffect(() => {
-    if (!selectedMedication || selectedMedication.id !== id) {
-      return;
-    }
-
-    setMedication(selectedMedication);
-  }, [id, selectedMedication]);
+    setMedication(mapMedicationToFormValues(medicationDetailQuery.data));
+  }, [medicationDetailQuery.data]);
 
   const selectedPatient = useMemo(
     () =>
@@ -201,6 +106,17 @@ const MedicationModal = () => {
       ),
     [medication.patientId, patientOptions, patientPageItems],
   );
+
+  useEffect(() => {
+    if (!selectedPatient) {
+      return;
+    }
+
+    setMedication((current) => ({
+      ...current,
+      patientName: selectedPatient.label,
+    }));
+  }, [selectedPatient]);
 
   if (action !== Action.Create && !id) {
     return <Redirect href={routes.protected.medication} />;
@@ -217,26 +133,26 @@ const MedicationModal = () => {
       return;
     }
 
+    const payload = {
+      patientId: medication.patientId,
+      name: medication.name.trim(),
+      dosageForm: medication.dosageForm,
+      note: medication.note.trim() || null,
+    };
+
     setError("");
 
     if (action === Action.Create) {
-      await addMedication({
-        patientId: medication.patientId,
-        name: medication.name.trim(),
-        dosageForm: medication.dosageForm,
-        memo: medication.memo.trim(),
-      });
+      await createMedication(payload).unwrap();
       router.push(routes.protected.medication);
       return;
     }
 
     if (action === Action.Edit && id) {
-      await editMedication(id, {
-        patientId: medication.patientId,
-        name: medication.name.trim(),
-        dosageForm: medication.dosageForm,
-        memo: medication.memo.trim(),
-      });
+      await updateMedication({
+        id,
+        changes: payload,
+      }).unwrap();
       router.push(routes.protected.medication);
     }
   };
@@ -246,24 +162,24 @@ const MedicationModal = () => {
       return;
     }
 
-    await removeMedication(id);
+    await deleteMedication(id).unwrap();
     router.push(routes.protected.medication);
   };
 
   const renderPatientSelection = () => (
     <>
-      <View style={styles.stepHeader}>
+      <View style={medicationStyles.stepHeader}>
         <ThemedText type="subtitle">Step 1 of 2</ThemedText>
-        <ThemedText style={styles.stepDescription}>
+        <ThemedText style={medicationStyles.stepDescription}>
           Choose the patient before filling medication details.
         </ThemedText>
       </View>
 
-      <View style={styles.filterSection}>
+      <View style={medicationStyles.filterSection}>
         <FieldInput
           value={patientFilter}
           onChangeText={setPatientFilter}
-          placeholder="搜尋病患名稱"
+          placeholder="Search patients"
         />
       </View>
 
@@ -275,22 +191,23 @@ const MedicationModal = () => {
             <Pressable
               key={patient.value}
               style={[
-                styles.selectionCard,
-                selected && styles.selectionCardSelected,
+                medicationStyles.selectionCard,
+                selected && medicationStyles.selectionCardSelected,
               ]}
               onPress={() => {
                 setMedication((current) => ({
                   ...current,
                   patientId: patient.value,
+                  patientName: patient.label,
                 }));
                 setError("");
               }}
             >
-              <View style={styles.selectionCardContent}>
-                <ThemedText style={styles.selectionTitle}>
+              <View style={medicationStyles.selectionCardContent}>
+                <ThemedText style={medicationStyles.selectionTitle}>
                   {patient.label}
                 </ThemedText>
-                <ThemedText style={styles.selectionMeta}>
+                <ThemedText style={medicationStyles.selectionMeta}>
                   Permission: {patient.permissionLevel}
                 </ThemedText>
               </View>
@@ -305,41 +222,42 @@ const MedicationModal = () => {
           );
         })
       ) : (
-        <View style={styles.emptyState}>
-          <ThemedText style={styles.emptyStateTitle}>
+        <View style={medicationStyles.emptyState}>
+          <ThemedText style={medicationStyles.emptyStateTitle}>
             No patients found on this page
           </ThemedText>
-          <ThemedText style={styles.emptyStateText}>
+          <ThemedText style={medicationStyles.emptyStateText}>
             Try a different keyword or move to another page.
           </ThemedText>
         </View>
       )}
 
-      <View style={styles.paginationRow}>
+      <View style={medicationStyles.paginationRow}>
         <Pressable
           style={[
-            styles.secondaryButton,
-            patientPage === 1 && styles.disabledButton,
+            medicationStyles.secondaryButton,
+            patientPage === 1 && medicationStyles.disabledButton,
           ]}
           onPress={() => setPatientPage((current) => current - 1)}
           disabled={patientPage === 1}
         >
-          <ThemedText style={styles.secondaryButtonText}>
+          <ThemedText style={medicationStyles.secondaryButtonText}>
             Previous
           </ThemedText>
         </Pressable>
-        <ThemedText style={styles.paginationText}>
+        <ThemedText style={medicationStyles.paginationText}>
           Page {patientPage} / {patientTotalPages}
         </ThemedText>
         <Pressable
           style={[
-            styles.secondaryButton,
-            patientPage >= patientTotalPages && styles.disabledButton,
+            medicationStyles.secondaryButton,
+            patientPage >= patientTotalPages &&
+              medicationStyles.disabledButton,
           ]}
           onPress={() => setPatientPage((current) => current + 1)}
           disabled={patientPage >= patientTotalPages}
         >
-          <ThemedText style={styles.secondaryButtonText}>
+          <ThemedText style={medicationStyles.secondaryButtonText}>
             Next
           </ThemedText>
         </Pressable>
@@ -349,10 +267,10 @@ const MedicationModal = () => {
 
   const renderForm = (showPatientPicker: boolean) => (
     <>
-      {isWizardMode ? (
-        <View style={styles.stepHeader}>
+      {!isInfoMode ? (
+        <View style={medicationStyles.stepHeader}>
           <ThemedText type="subtitle">Step 2 of 2</ThemedText>
-          <ThemedText style={styles.stepDescription}>
+          <ThemedText style={medicationStyles.stepDescription}>
             Fill out the medication details for the selected patient.
           </ThemedText>
         </View>
@@ -362,7 +280,7 @@ const MedicationModal = () => {
         isInfoMode ? (
           <FieldInput
             label="Patient"
-            value={selectedPatient?.label ?? ""}
+            value={selectedPatient?.label ?? medication.patientName}
             onChangeText={() => {}}
             disabled
           />
@@ -375,18 +293,28 @@ const MedicationModal = () => {
             value={medication.patientId}
             label="Patient"
             onValueChange={(patientId) => {
-              setMedication((prev) => ({ ...prev, patientId }));
+              const patientName =
+                patientOptions.find(
+                  (item) => item.value === patientId,
+                )?.label ?? "";
+
+              setMedication((prev) => ({
+                ...prev,
+                patientId,
+                patientName,
+              }));
             }}
             placeholder="Select a patient"
           />
         )
       ) : (
-        <View style={styles.selectedSummary}>
-          <ThemedText style={styles.summaryLabel}>
+        <View style={medicationStyles.selectedSummary}>
+          <ThemedText style={medicationStyles.summaryLabel}>
             Selected patient
           </ThemedText>
-          <ThemedText style={styles.summaryValue}>
-            {selectedPatient?.label ?? "Not selected"}
+          <ThemedText style={medicationStyles.summaryValue}>
+            {(selectedPatient?.label ?? medication.patientName) ||
+              "Not selected"}
           </ThemedText>
         </View>
       )}
@@ -415,11 +343,11 @@ const MedicationModal = () => {
       />
 
       <FieldInput
-        label="Memo"
+        label="Note"
         placeholder="Optional notes"
-        value={medication.memo}
-        onChangeText={(memo) => {
-          setMedication((prev) => ({ ...prev, memo }));
+        value={medication.note}
+        onChangeText={(note) => {
+          setMedication((prev) => ({ ...prev, note }));
         }}
         disabled={isInfoMode}
         multiline
@@ -432,12 +360,16 @@ const MedicationModal = () => {
     <>
       <FullScreenLoading
         visible={
-          userLoading || medicationLoading || patientListLoading
+          medicationDetailQuery.isFetching ||
+          patientListQuery.isFetching ||
+          createState.isLoading ||
+          updateState.isLoading ||
+          deleteState.isLoading
         }
       />
-      <ThemedView style={styles.container}>
+      <ThemedView style={medicationStyles.container}>
         <ModalHeader
-          title={TITLE[action]}
+          title={ACTION_TITLE[action]}
           leftIcon={
             isInfoMode && id ? (
               <Pressable
@@ -457,37 +389,39 @@ const MedicationModal = () => {
           }
         />
         <Container>
-          {isWizardMode && stepIndex === 0
+          {!isInfoMode && stepIndex === 0
             ? renderPatientSelection()
-            : renderForm(!isWizardMode)}
+            : renderForm(isInfoMode)}
 
           {error ? (
-            <ThemedText style={styles.errorText}>{error}</ThemedText>
+            <ThemedText style={medicationStyles.errorText}>
+              {error}
+            </ThemedText>
           ) : null}
         </Container>
 
         <Header>
-          {isWizardMode ? (
-            <View style={styles.wizardFooter}>
+          {!isInfoMode ? (
+            <View style={medicationStyles.wizardFooter}>
               {stepIndex > 0 ? (
                 <Pressable
-                  style={[styles.secondaryFooterButton]}
+                  style={[medicationStyles.secondaryFooterButton]}
                   onPress={() =>
                     setStepIndex((current) => current - 1)
                   }
                 >
                   <ThemedText
-                    style={styles.secondaryFooterButtonText}
+                    style={medicationStyles.secondaryFooterButtonText}
                   >
                     Back
                   </ThemedText>
                 </Pressable>
               ) : (
-                <View style={styles.footerSpacer} />
+                <View style={medicationStyles.footerSpacer} />
               )}
 
               <Pressable
-                style={styles.actionButton}
+                style={medicationStyles.actionButton}
                 onPress={() => {
                   if (stepIndex === 0) {
                     if (!medication.patientId) {
@@ -500,12 +434,12 @@ const MedicationModal = () => {
                     return;
                   }
 
-                  handleSave();
+                  void handleSave();
                 }}
               >
-                <ThemedText style={styles.actionButtonText}>
+                <ThemedText style={medicationStyles.actionButtonText}>
                   {stepIndex === CREATE_STEPS.length - 1
-                    ? BUTTON[action]
+                    ? ACTION_BUTTON[action]
                     : "Continue"}
                 </ThemedText>
               </Pressable>
@@ -513,13 +447,13 @@ const MedicationModal = () => {
           ) : (
             <Pressable
               style={[
-                styles.actionButton,
-                isInfoMode ? styles.deleteButton : null,
+                medicationStyles.actionButton,
+                isInfoMode ? medicationStyles.deleteButton : null,
               ]}
-              onPress={isInfoMode ? handleDelete : handleSave}
+              onPress={() => void handleDelete()}
             >
-              <ThemedText style={styles.actionButtonText}>
-                {BUTTON[action]}
+              <ThemedText style={medicationStyles.actionButtonText}>
+                {ACTION_BUTTON[action]}
               </ThemedText>
             </Pressable>
           )}
@@ -528,149 +462,5 @@ const MedicationModal = () => {
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: "100%",
-    flex: 1,
-  },
-  actionButtonText: {
-    color: "white",
-    width: "100%",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  actionButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#3C83F6",
-  },
-  deleteButton: {
-    backgroundColor: "#EF4444",
-  },
-  errorText: {
-    color: "#DC2626",
-    lineHeight: 20,
-  },
-  stepHeader: {
-    gap: 4,
-  },
-  stepDescription: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  selectionCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    backgroundColor: "#FFFFFF",
-  },
-  selectionCardSelected: {
-    borderColor: "#2563EB",
-    backgroundColor: "#EFF6FF",
-  },
-  selectionCardContent: {
-    flex: 1,
-    gap: 4,
-  },
-  selectionTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  selectionMeta: {
-    color: "#64748B",
-  },
-  filterSection: {
-    gap: 8,
-  },
-  filterLabel: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-  filterInput: {
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: "#E2E8F0",
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: "#0F172A",
-  },
-  paginationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  secondaryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-  },
-  secondaryButtonText: {
-    color: "#334155",
-    fontWeight: "600",
-  },
-  paginationText: {
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  emptyState: {
-    borderRadius: 12,
-    padding: 16,
-    backgroundColor: "#F8FAFC",
-    gap: 6,
-  },
-  emptyStateTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  emptyStateText: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  selectedSummary: {
-    borderRadius: 12,
-    backgroundColor: "#F8FAFC",
-    padding: 16,
-    gap: 4,
-  },
-  summaryLabel: {
-    color: "#64748B",
-  },
-  summaryValue: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  wizardFooter: {
-    width: "100%",
-    flexDirection: "row",
-    gap: 12,
-  },
-  secondaryFooterButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-  },
-  secondaryFooterButtonText: {
-    color: "#334155",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-  footerSpacer: {
-    flex: 1,
-  },
-});
 
 export default MedicationModal;

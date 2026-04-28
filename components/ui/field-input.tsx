@@ -26,6 +26,7 @@ interface IFieldInputProps {
   autoCorrect?: boolean;
   required?: boolean;
   iconName?: string;
+  message?: string;
 }
 
 const FieldInput = ({
@@ -42,6 +43,7 @@ const FieldInput = ({
   autoCorrect,
   required = false,
   iconName,
+  message,
 }: IFieldInputProps) => {
   return (
     <ThemedView style={styles.field}>
@@ -89,6 +91,13 @@ const FieldInput = ({
           {...TEXT_INPUT_PROPS}
         />
       </ThemedView>
+      {message && (
+        <ThemedText
+          style={{ fontSize: 12, lineHeight: 12, color: "#DC2626" }}
+        >
+          {message}
+        </ThemedText>
+      )}
     </ThemedView>
   );
 };

@@ -2,9 +2,10 @@ import {
   DOSE_UNIT_LABELS,
   MEDICATION_DOSAGE_FORM,
 } from "@/constants/medication";
-import { IRES_Medication } from "@/types/api";
+import { EventItem } from "@/store/history";
+import { Medication } from "@/store/medication";
 import { DosageForm } from "@/types/common";
-import { IEvent } from "@/types/schedule";
+
 import dayjs from "dayjs";
 
 export const evaluteStatus = ({
@@ -47,7 +48,7 @@ export const evaluteStatus = ({
 export const evaluateDosageFormIcon = ({
   dosageForm,
 }: {
-  dosageForm: IRES_Medication["dosageForm"] | null;
+  dosageForm: Medication["dosageForm"] | null;
 }) => {
   let name = "local-hospital";
   let color = "#3C83F6";
@@ -78,7 +79,10 @@ export const evaluateLabel = ({
   medicationDosageForm,
   doseUnit,
   amount,
-}: Pick<IEvent, "medicationDosageForm" | "doseUnit" | "amount">) => {
+}: Pick<
+  EventItem,
+  "medicationDosageForm" | "doseUnit" | "amount"
+>) => {
   const list: string[] = [amount.toString()];
 
   if (doseUnit) {

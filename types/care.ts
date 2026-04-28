@@ -1,5 +1,5 @@
-import { PermissionLevel } from "./api/care-invitation";
-export { PermissionLevel } from "./api/care-invitation";
+import { PermissionLevel } from "../store/care-invitation/type";
+export { PermissionLevel } from "../store/care-invitation/type";
 
 export enum RelationShipStatus {
   active = "active",

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet } from "react-native";
 
 import { PERMISSION_LABEL, ROLE_LABEL } from "@/constants/care";
 import { useTimedMessage } from "@/hooks/use-timed-message";
-import { PermissionLevel, Role } from "@/types/api/care-invitation";
+import { PermissionLevel, Role } from "@/store/care-invitation/type";
 import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
 import { createEnumOptions } from "@/utils/common";
 

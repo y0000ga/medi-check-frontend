@@ -1,11 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
 
+import { invitationManagementStyles } from "@/components/me/styles/invitation-management.style";
 import InviteCard from "@/components/care-network/InviteCard";
 import InviteForm from "@/components/care-network/InviteForm";
 import SectionCard from "@/components/care-network/SectionCard";
@@ -16,53 +12,33 @@ import FieldPicker from "@/components/ui/field-picker";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import ModalHeader from "@/components/ui/modal-header";
 import { INVITATION_STATUS_LABEL } from "@/constants/care-relationship";
-import {
-  acceptInvitation,
-  createInvitation,
-  declineInvitation,
-  getInvitationList,
-  revokeInvitation,
-} from "@/libs/api/care-invitation";
+import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 import { createInvtationSchema } from "@/schemas/care-inviation";
-import { useUserStore } from "@/stores/user";
-import { IPaginationResponse } from "@/types/api/base";
+import { IPaginationResponse } from "@/store/api/type";
+import {
+  useAcceptInvitationMutation,
+  useCreateInvitationMutation,
+  useDeclineInvitationMutation,
+  useGetInvitationListQuery,
+  useRevokeInvitationMutation,
+} from "@/store/care-invitation/api";
 import {
   IInvitation,
   InvationStatus,
   InvitationDirection,
   Role,
-} from "@/types/api/care-invitation";
+} from "@/store/care-invitation/type";
 import { ICreateInvitationInput } from "@/types/schemas/care-invitation";
 import { createEnumOptions } from "@/utils/common";
-import { DEFAULT_PAGE_SIZE } from "@/constants/common";
 
-const SORT_ORDER_LABEL = {
-  desc: "最新優先",
-  asc: "最舊優先",
-} as const;
-
-const INVITATION_DIRECTION_LABEL: Record<
-  InvitationDirection,
-  string
-> = {
-  [InvitationDirection.sent]: "我發出的",
-  [InvitationDirection.received]: "我收到的",
+const SORT_ORDER_LABEL = { desc: "??啣??", asc: "????" } as const;
+const INVITATION_DIRECTION_LABEL: Record<InvitationDirection, string> = {
+  [InvitationDirection.sent]: "??箇?",
+  [InvitationDirection.received]: "??啁?",
 };
-
 type SortOrder = keyof typeof SORT_ORDER_LABEL;
 
 const InvitationManagementModal = () => {
-  const userLoading = useUserStore(
-    (state) => state.isLoading.length > 0,
-  );
-  const [inviteInfo, setInviteInfo] = useState<
-    IPaginationResponse<IInvitation>
-  >({
-    page: 1,
-    total_size: 0,
-    list: [],
-  });
-  const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [isFormExpanded, setIsFormExpanded] = useState(false);
   const [isFilterExpanded, setIsFilterExpanded] = useState(false);
@@ -72,69 +48,30 @@ const InvitationManagementModal = () => {
     InvationStatus.pending,
   );
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-
-  const loadData = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const invitation = await getInvitationList({
-        page,
-        page_size: DEFAULT_PAGE_SIZE,
-        sort_by: "created_at",
-        sort_order: sortOrder,
-        direction: directionFilter,
-        status: statusFilter,
-      });
-
-      setInviteInfo(invitation);
-    } finally {
-      setLoading(false);
-    }
-  }, [directionFilter, page, sortOrder, statusFilter]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const invitationQuery = useGetInvitationListQuery({
+    page,
+    page_size: DEFAULT_PAGE_SIZE,
+    sort_by: "created_at",
+    sort_order: sortOrder,
+    direction: directionFilter,
+    status: statusFilter,
+  });
+  const inviteInfo: IPaginationResponse<IInvitation> =
+    invitationQuery.data ?? { page: 1, total_size: 0, list: [] };
+  const [createInvitation] = useCreateInvitationMutation();
+  const [acceptInvitation] = useAcceptInvitationMutation();
+  const [declineInvitation] = useDeclineInvitationMutation();
+  const [revokeInvitation] = useRevokeInvitationMutation();
+  const loading = invitationQuery.isFetching;
 
   const handleInvite = async (
     role: Role,
     input: ICreateInvitationInput,
   ) => {
     const body = createInvtationSchema(input);
-    await createInvitation(role, body);
+    await createInvitation({ role, body }).unwrap();
     setIsFormExpanded(false);
     setPage(1);
-    await loadData();
-  };
-
-  const handleAccept = async (invitationId: string) => {
-    setLoading(true);
-    try {
-      await acceptInvitation(invitationId);
-      await loadData();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDecline = async (invitationId: string) => {
-    setLoading(true);
-    try {
-      await declineInvitation(invitationId);
-      await loadData();
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRevoke = async (invitationId: string) => {
-    setLoading(true);
-    try {
-      await revokeInvitation(invitationId);
-      await loadData();
-    } finally {
-      setLoading(false);
-    }
   };
 
   const totalPages = Math.max(
@@ -145,11 +82,7 @@ const InvitationManagementModal = () => {
   const canGoNext = page < totalPages;
 
   const directionOptions = useMemo(
-    () =>
-      createEnumOptions(
-        InvitationDirection,
-        INVITATION_DIRECTION_LABEL,
-      ),
+    () => createEnumOptions(InvitationDirection, INVITATION_DIRECTION_LABEL),
     [],
   );
   const statusOptions = useMemo(
@@ -165,63 +98,55 @@ const InvitationManagementModal = () => {
     [],
   );
 
-  const filterSummary = `${
-    INVITATION_DIRECTION_LABEL[directionFilter]
-  } / ${INVITATION_STATUS_LABEL[statusFilter]} / ${
-    SORT_ORDER_LABEL[sortOrder]
-  }`;
+  const filterSummary = `${INVITATION_DIRECTION_LABEL[directionFilter]} / ${INVITATION_STATUS_LABEL[statusFilter]} / ${SORT_ORDER_LABEL[sortOrder]}`;
 
   return (
     <>
-      <FullScreenLoading visible={userLoading || loading} />
-      <ThemedView style={styles.screen}>
-        <ModalHeader title="邀請管理" />
+      <FullScreenLoading visible={loading} />
+      <ThemedView style={invitationManagementStyles.screen}>
+        <ModalHeader title="?隢恣??" />
         <ScrollView>
           <Container>
-            <View style={styles.contentCard}>
+            <View style={invitationManagementStyles.contentCard}>
               <Pressable
-                style={styles.toggleButton}
-                onPress={() =>
-                  setIsFormExpanded((current) => !current)
-                }
+                style={invitationManagementStyles.toggleButton}
+                onPress={() => setIsFormExpanded((current) => !current)}
               >
-                <ThemedText style={styles.toggleButtonText}>
-                  {isFormExpanded ? "收合表單" : "邀請病人或照顧者"}
+                <ThemedText style={invitationManagementStyles.toggleButtonText}>
+                  {isFormExpanded ? "?嗅?銵典" : "?隢?鈭箸??折“??"}
                 </ThemedText>
               </Pressable>
 
               {isFormExpanded ? (
-                <View style={styles.formWrap}>
+                <View style={invitationManagementStyles.formWrap}>
                   <InviteForm onConfirm={handleInvite} />
                 </View>
               ) : null}
             </View>
 
-            <SectionCard title="邀請一覽表">
-              <View style={styles.filterCard}>
+            <SectionCard title="?隢?閬質”">
+              <View style={invitationManagementStyles.filterCard}>
                 <Pressable
-                  style={styles.filterToggle}
-                  onPress={() =>
-                    setIsFilterExpanded((current) => !current)
-                  }
+                  style={invitationManagementStyles.filterToggle}
+                  onPress={() => setIsFilterExpanded((current) => !current)}
                 >
-                  <View style={styles.filterToggleTextWrap}>
-                    <ThemedText style={styles.filterToggleTitle}>
-                      篩選條件
+                  <View style={invitationManagementStyles.filterToggleTextWrap}>
+                    <ThemedText style={invitationManagementStyles.filterToggleTitle}>
+                      蝭拚璇辣
                     </ThemedText>
-                    <ThemedText style={styles.filterToggleSummary}>
+                    <ThemedText style={invitationManagementStyles.filterToggleSummary}>
                       {filterSummary}
                     </ThemedText>
                   </View>
-                  <ThemedText style={styles.filterToggleArrow}>
-                    {isFilterExpanded ? "收合" : "展開"}
+                  <ThemedText style={invitationManagementStyles.filterToggleArrow}>
+                    {isFilterExpanded ? "?嗅?" : "撅?"}
                   </ThemedText>
                 </Pressable>
 
                 {isFilterExpanded ? (
-                  <View style={styles.filterFields}>
+                  <View style={invitationManagementStyles.filterFields}>
                     <FieldPicker<InvitationDirection>
-                      label="邀請方向"
+                      label="?隢??"
                       value={directionFilter}
                       options={directionOptions}
                       onValueChange={(value) => {
@@ -230,7 +155,7 @@ const InvitationManagementModal = () => {
                       }}
                     />
                     <FieldPicker<InvationStatus>
-                      label="狀態篩選"
+                      label="??祟??"
                       value={statusFilter}
                       options={statusOptions}
                       onValueChange={(value) => {
@@ -239,7 +164,7 @@ const InvitationManagementModal = () => {
                       }}
                     />
                     <FieldPicker<SortOrder>
-                      label="排序方式"
+                      label="???孵?"
                       value={sortOrder}
                       options={sortOptions}
                       onValueChange={(value) => {
@@ -252,63 +177,59 @@ const InvitationManagementModal = () => {
               </View>
 
               {inviteInfo.list.length ? (
-                <View style={styles.listCard}>
+                <View style={invitationManagementStyles.listCard}>
                   {inviteInfo.list.map((invite, index) => (
                     <InviteCard
                       key={invite.id}
                       invite={invite}
                       isLast={index === inviteInfo.list.length - 1}
                       direction={directionFilter}
-                      onAccept={handleAccept}
-                      onDecline={handleDecline}
-                      onRevoke={handleRevoke}
+                      onAccept={async (id) => acceptInvitation(id).unwrap()}
+                      onDecline={async (id) => declineInvitation(id).unwrap()}
+                      onRevoke={async (id) => revokeInvitation(id).unwrap()}
                     />
                   ))}
                 </View>
               ) : (
-                <View style={styles.emptyCard}>
-                  <ThemedText style={styles.emptyText}>
-                    這個篩選條件下目前沒有邀請。
+                <View style={invitationManagementStyles.emptyCard}>
+                  <ThemedText style={invitationManagementStyles.emptyText}>
+                    ?祟?豢?隞嗡??桀?瘝??隢?
                   </ThemedText>
                 </View>
               )}
 
-              <View style={styles.paginationRow}>
+              <View style={invitationManagementStyles.paginationRow}>
                 <Pressable
                   style={[
-                    styles.pageButton,
-                    !canGoPrev && styles.pageButtonDisabled,
+                    invitationManagementStyles.pageButton,
+                    !canGoPrev && invitationManagementStyles.pageButtonDisabled,
                   ]}
                   onPress={() => {
-                    if (canGoPrev) {
-                      setPage((current) => current - 1);
-                    }
+                    if (canGoPrev) setPage((current) => current - 1);
                   }}
                   disabled={!canGoPrev}
                 >
-                  <ThemedText style={styles.pageButtonText}>
-                    上一頁
+                  <ThemedText style={invitationManagementStyles.pageButtonText}>
+                    銝???
                   </ThemedText>
                 </Pressable>
 
-                <ThemedText style={styles.pageText}>
-                  第 {page} / {totalPages} 頁
+                <ThemedText style={invitationManagementStyles.pageText}>
+                  蝚?{page} / {totalPages} ??
                 </ThemedText>
 
                 <Pressable
                   style={[
-                    styles.pageButton,
-                    !canGoNext && styles.pageButtonDisabled,
+                    invitationManagementStyles.pageButton,
+                    !canGoNext && invitationManagementStyles.pageButtonDisabled,
                   ]}
                   onPress={() => {
-                    if (canGoNext) {
-                      setPage((current) => current + 1);
-                    }
+                    if (canGoNext) setPage((current) => current + 1);
                   }}
                   disabled={!canGoNext}
                 >
-                  <ThemedText style={styles.pageButtonText}>
-                    下一頁
+                  <ThemedText style={invitationManagementStyles.pageButtonText}>
+                    銝???
                   </ThemedText>
                 </Pressable>
               </View>
@@ -321,149 +242,3 @@ const InvitationManagementModal = () => {
 };
 
 export default InvitationManagementModal;
-
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  contentCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 18,
-    gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  toggleButton: {
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  toggleButtonText: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  helperText: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  formWrap: {
-    gap: 12,
-  },
-  sectionMeta: {
-    marginBottom: 12,
-    gap: 4,
-  },
-  sectionMetaText: {
-    color: "#64748B",
-    fontWeight: "600",
-  },
-  sectionHint: {
-    color: "#94A3B8",
-    fontSize: 13,
-  },
-  filterCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-    gap: 12,
-  },
-  filterToggle: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-  },
-  filterToggleTextWrap: {
-    flex: 1,
-    gap: 4,
-  },
-  filterToggleTitle: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  filterToggleSummary: {
-    color: "#64748B",
-    lineHeight: 18,
-  },
-  filterToggleArrow: {
-    color: "#2563EB",
-    fontWeight: "700",
-  },
-  filterFields: {
-    gap: 12,
-  },
-  listCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  emptyCard: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 18,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  emptyText: {
-    color: "#64748B",
-    lineHeight: 20,
-  },
-  paginationRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  pageButton: {
-    minWidth: 88,
-    borderRadius: 8,
-    backgroundColor: "#E2E8F0",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    alignItems: "center",
-  },
-  pageButtonDisabled: {
-    opacity: 0.45,
-  },
-  pageButtonText: {
-    color: "#0F172A",
-    fontWeight: "700",
-  },
-  pageText: {
-    color: "#475569",
-    fontWeight: "600",
-  },
-  doneButton: {
-    width: "100%",
-    padding: 16,
-    borderRadius: 8,
-    backgroundColor: "#3C83F6",
-  },
-  doneButtonText: {
-    color: "white",
-    width: "100%",
-    textAlign: "center",
-    fontWeight: "700",
-  },
-});

@@ -22,7 +22,7 @@ export const DEFAULT_SCHEDULE_FORM: ScheduleFormValues = {
   frequencyUnit: "",
   interval: "1",
   weekdays: [],
-  endType: "",
+  endType: null,
   untilDate: "",
   occurrenceCount: "",
 };
@@ -32,14 +32,14 @@ export const DOSE_UNIT_OPTIONS = Object.values(DoseUnit).map(
 );
 
 const FREQUENCY_LABEL = {
-  [FrequencyUnit.Day]: "每天",
-  [FrequencyUnit.Week]: "每週",
-  [FrequencyUnit.Month]: "每月",
-  [FrequencyUnit.Year]: "每年",
+  [FrequencyUnit.Day]: "Daily",
+  [FrequencyUnit.Week]: "Weekly",
+  [FrequencyUnit.Month]: "Monthly",
+  [FrequencyUnit.Year]: "Yearly",
 };
 
 export const FREQUENCY_OPTIONS = [
-  { value: "" as const, label: "單次提醒" },
+  { value: "" as const, label: "One-time" },
   ...[
     FrequencyUnit.Day,
     FrequencyUnit.Week,
@@ -49,9 +49,9 @@ export const FREQUENCY_OPTIONS = [
 ];
 
 export const END_TYPE_LABEL = {
-  [ScheduleEndType.count]: "指定次數",
-  [ScheduleEndType.until]: "到指定日期",
-  [ScheduleEndType.never]: "不設定結束",
+  [ScheduleEndType.count]: "After count",
+  [ScheduleEndType.until]: "Until date",
+  [ScheduleEndType.never]: "No end date",
 };
 
 export const END_TYPE_OPTIONS = Object.values(ScheduleEndType).map(
@@ -59,23 +59,29 @@ export const END_TYPE_OPTIONS = Object.values(ScheduleEndType).map(
 );
 
 export const WEEKDAY_OPTIONS = [
-  { value: Weekday.Sun, label: "日" },
-  { value: Weekday.Mon, label: "一" },
-  { value: Weekday.Tue, label: "二" },
-  { value: Weekday.Wed, label: "三" },
-  { value: Weekday.Thu, label: "四" },
-  { value: Weekday.Fri, label: "五" },
-  { value: Weekday.Sat, label: "六" },
+  { value: Weekday.Sun, label: "Sun" },
+  { value: Weekday.Mon, label: "Mon" },
+  { value: Weekday.Tue, label: "Tue" },
+  { value: Weekday.Wed, label: "Wed" },
+  { value: Weekday.Thu, label: "Thu" },
+  { value: Weekday.Fri, label: "Fri" },
+  { value: Weekday.Sat, label: "Sat" },
 ];
 
 export const TITLE_BY_ACTION: Record<Action, string> = {
-  [Action.Create]: "新增提醒",
-  [Action.Edit]: "編輯提醒",
-  [Action.Info]: "提醒資訊",
+  [Action.Create]: "Create reminder",
+  [Action.Edit]: "Edit reminder",
+  [Action.Info]: "Reminder details",
 };
 
 export const BUTTON_BY_ACTION: Record<Action, string> = {
-  [Action.Create]: "建立提醒",
-  [Action.Edit]: "儲存變更",
-  [Action.Info]: "刪除此提醒",
+  [Action.Create]: "Create reminder",
+  [Action.Edit]: "Save changes",
+  [Action.Info]: "Delete reminder",
 };
+
+export const CREATE_STEPS = [
+  "Select patient",
+  "Select medication",
+  "Schedule details",
+] as const;

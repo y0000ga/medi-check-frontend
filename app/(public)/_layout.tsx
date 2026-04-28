@@ -3,26 +3,32 @@ import { useEffect } from "react";
 
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { routes } from "@/constants/route";
-import { useUserStore } from "@/stores/user";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  markAuthInitialized,
+  selectHasInitializedAuth,
+  useAuthUser,
+  useLazyGetCurrentUserQuery,
+} from "@/store/user";
 
 const PublicLayout = () => {
-  const initializeAuth = useUserStore(
-    (state) => state.initializeAuth,
-  );
-  const hasInitializedAuth = useUserStore(
-    (state) => state.hasInitializedAuth,
-  );
-  const currentUser = useUserStore((state) => state.currentUser);
-  const isAuthenticated = useUserStore((state) =>
-    state.isAuthenticated(),
-  );
+  const dispatch = useAppDispatch();
+  const hasInitializedAuth = useAppSelector(selectHasInitializedAuth);
+  const { isAuthenticated, currentUser } = useAuthUser();
+  const [loadCurrentUser] = useLazyGetCurrentUserQuery();
 
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    dispatch(markAuthInitialized());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (isAuthenticated && !currentUser) {
+      loadCurrentUser();
+    }
+  }, [currentUser, isAuthenticated, loadCurrentUser]);
 
   if (!hasInitializedAuth) {
-    return <FullScreenLoading visible text="Checking session..." />;
+    return <FullScreenLoading visible />;
   }
 
   if (isAuthenticated && currentUser) {

@@ -1,12 +1,12 @@
 import { Pressable, StyleSheet } from "react-native";
 
-import { INVITATION_STATUS_LABEL } from "@/constants/care-relationship";
 import { PERMISSION_LABEL } from "@/constants/care";
+import { INVITATION_STATUS_LABEL } from "@/constants/care-relationship";
 import {
   IInvitation,
   InvitationDirection,
   InvitationType,
-} from "@/types/api/care-invitation";
+} from "@/store/care-invitation/type";
 
 import { ThemedText } from "../themed-text";
 import { ThemedView } from "../themed-view";

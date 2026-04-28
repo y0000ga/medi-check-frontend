@@ -3,11 +3,11 @@ import { IconSymbol } from "./ui/icon-symbol";
 import { evaluateDosageFormIcon } from "@/utils/common";
 import { MEDICATION_DOSAGE_FORM } from "@/constants/medication";
 import { useRouter } from "expo-router";
-import { IRES_Medication } from "@/types/api";
 import { routes } from "@/constants/route";
+import { Medication } from "@/store/medication";
 
 interface IProps {
-  medication: IRES_Medication;
+  medication: Medication;
   patientNameTag?: string | null;
 }
 

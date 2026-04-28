@@ -3,23 +3,21 @@ import { useEffect } from "react";
 
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { routes } from "@/constants/route";
-import { useUserStore } from "@/stores/user";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  markAuthInitialized,
+  selectHasInitializedAuth,
+  useAuthUser,
+} from "@/store/user";
 
 const IndexScreen = () => {
-  const initializeAuth = useUserStore(
-    (state) => state.initializeAuth,
-  );
-  const hasInitializedAuth = useUserStore(
-    (state) => state.hasInitializedAuth,
-  );
-  const currentUser = useUserStore((state) => state.currentUser);
-  const isAuthenticated = useUserStore((state) =>
-    state.isAuthenticated(),
-  );
+  const dispatch = useAppDispatch();
+  const hasInitializedAuth = useAppSelector(selectHasInitializedAuth);
+  const { isAuthenticated, currentUser } = useAuthUser();
 
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    dispatch(markAuthInitialized());
+  }, [dispatch]);
 
   if (!hasInitializedAuth) {
     return <FullScreenLoading visible text="Checking session..." />;

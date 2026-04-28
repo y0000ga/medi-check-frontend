@@ -1,8 +1,9 @@
 import dayjs from "dayjs";
 
+import { IScheduleDetail } from "@/store/schedule/type";
 import { FrequencyUnit } from "@/types/common";
 import { ScheduleEndType } from "@/types/domain";
-import { IDB_Schedule } from "@/types/db";
+import { ScheduleRecord } from "@/types/records";
 import { ScheduleFormValues } from "@/types/schedule";
 
 export const parseTimeSlots = (value?: string) =>
@@ -12,7 +13,7 @@ export const parseTimeSlots = (value?: string) =>
     .filter(Boolean);
 
 const isWithinEndCondition = (
-  schedule: IDB_Schedule,
+  schedule: ScheduleRecord,
   targetDate: dayjs.Dayjs,
 ) => {
   if (
@@ -32,7 +33,7 @@ const isWithinEndCondition = (
 };
 
 export const scheduleOccursOnDate = (
-  schedule: IDB_Schedule,
+  schedule: ScheduleRecord,
   targetDate: dayjs.Dayjs,
 ) => {
   const startDate = dayjs(schedule.startDate);
@@ -96,7 +97,7 @@ export const scheduleOccursOnDate = (
 };
 
 const countOccurrencesUntil = (
-  schedule: IDB_Schedule,
+  schedule: ScheduleRecord,
   targetDate: dayjs.Dayjs,
 ) => {
   let count = 0;
@@ -117,7 +118,7 @@ const countOccurrencesUntil = (
 };
 
 export const scheduleMatchesCountLimit = (
-  schedule: IDB_Schedule,
+  schedule: ScheduleRecord,
   targetDate: dayjs.Dayjs,
 ) => {
   if (
@@ -134,44 +135,44 @@ export const scheduleMatchesCountLimit = (
 };
 
 export const scheduleMatchesDate = (
-  schedule: IDB_Schedule,
+  schedule: ScheduleRecord,
   targetDate: dayjs.Dayjs,
 ) =>
   scheduleOccursOnDate(schedule, targetDate) &&
   scheduleMatchesCountLimit(schedule, targetDate);
 
 export const toScheduleFormValues = (
-  schedule: IDB_Schedule,
+  schedule: IScheduleDetail,
 ): ScheduleFormValues => ({
   id: schedule.id,
-  patientId: schedule.patientId,
-  medicationId: schedule.medicationId,
+  patientId: schedule.patient_id,
+  medicationId: schedule.medication_id,
   timezone: schedule.timezone,
-  startDate: schedule.startDate,
-  timeSlotsText: schedule.timeSlots?.join(", "),
+  startDate: schedule.start_date,
+  timeSlotsText: schedule.time_slots?.join(", "),
   amount: schedule.amount.toString(),
-  doseUnit: schedule.doseUnit ?? "",
-  frequencyUnit: schedule.frequencyUnit ?? "",
+  doseUnit: schedule.dose_unit ?? "",
+  frequencyUnit: schedule.frequency_unit ?? "",
   interval: schedule.interval?.toString() ?? "1",
   weekdays: schedule.weekdays ?? [],
-  endType: schedule.endType ?? "",
-  untilDate: schedule.untilDate ?? "",
-  occurrenceCount: schedule.occurrenceCount?.toString() ?? "",
+  endType: schedule.end_type || null,
+  untilDate: schedule.until_date ?? "",
+  occurrenceCount: schedule.occurrence_count?.toString() ?? "",
 });
 
 export const toSchedulePayload = (
   values: ScheduleFormValues,
-): Omit<IDB_Schedule, "id"> => {
+): Omit<ScheduleRecord, "id"> => {
   const hasFrequency = values.frequencyUnit !== "";
   const endType =
-    hasFrequency && values.endType !== "" ? values.endType : null;
+    hasFrequency && values.endType ? values.endType : null;
 
   return {
     patientId: values.patientId,
     medicationId: values.medicationId,
     timezone: values.timezone,
     startDate: values.startDate,
-    timeSlots: parseTimeSlots(values.timeSlotsText),
+    timeSlots: parseTimeSlots(values.timeSlotsText) || [""],
     amount: Number(values.amount) || 1,
     doseUnit: values.doseUnit || null,
     frequencyUnit: hasFrequency

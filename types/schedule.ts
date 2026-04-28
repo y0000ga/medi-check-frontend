@@ -1,8 +1,5 @@
 import { DoseUnit, FrequencyUnit, Weekday } from "@/types/common";
-import { IRES_Event } from "./api";
 import { ScheduleEndType } from "./domain";
-
-export type IEvent = IRES_Event;
 
 export type ScheduleFormValues = {
   id: string;
@@ -16,7 +13,7 @@ export type ScheduleFormValues = {
   frequencyUnit: FrequencyUnit | "";
   interval: string;
   weekdays: Weekday[];
-  endType: ScheduleEndType | "";
+  endType: ScheduleEndType | null;
   untilDate: string;
   occurrenceCount: string;
 };

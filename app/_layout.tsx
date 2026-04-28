@@ -8,6 +8,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { AppStoreProvider } from "@/store/provider";
 
 export const unstable_settings = {
   anchor: "(protected)",
@@ -16,16 +17,18 @@ export const unstable_settings = {
 const RootLayout = () => {
   const colorScheme = useColorScheme();
   return (
-    <ThemeProvider
-      value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-    >
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(public)" />
-        <Stack.Screen name="(protected)" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <AppStoreProvider>
+      <ThemeProvider
+        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
+      >
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(public)" />
+          <Stack.Screen name="(protected)" />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </AppStoreProvider>
   );
 };
 

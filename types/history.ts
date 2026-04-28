@@ -1,15 +1,12 @@
-import { IRES_History } from "./api";
-import { HistorySource } from "./domain";
+import { HistoryDetail } from "@/store/history";
 
 export type EditableHistoryValues = {
-  status: IRES_History["status"];
+  status: HistoryDetail["status"];
   intakenTime: string;
-  rate: string;
   takenAmount: string;
   memo: string;
   feeling: string;
   reason: string;
-  source: HistorySource;
   customSymptomTagsText: string;
   symptomTags: string[];
 };

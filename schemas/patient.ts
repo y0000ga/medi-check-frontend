@@ -1,4 +1,4 @@
-import { ICreatePatientBody } from "@/types/api/patient";
+import { ICreatePatientBody } from "@/store/patient/type";
 import { ICreatePatientInput } from "@/types/schemas/patient";
 import dayjs from "dayjs";
 

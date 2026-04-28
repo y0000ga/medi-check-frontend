@@ -3,70 +3,48 @@ import { useEffect } from "react";
 
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { routes } from "@/constants/route";
-import { useUserStore } from "@/stores/user";
-import { useViewerStore } from "@/stores/viewer";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import {
+  markAuthInitialized,
+  selectHasInitializedAuth,
+  useAuthUser,
+  useLazyGetCurrentUserQuery,
+} from "@/store/user";
+
 
 const ProtectedLayout = () => {
-  const initializeAuth = useUserStore(
-    (state) => state.initializeAuth,
-  );
-  const loadCurrentUser = useUserStore(
-    (state) => state.loadCurrentUser,
-  );
-  const hasInitializedAuth = useUserStore(
-    (state) => state.hasInitializedAuth,
-  );
-  const currentUser = useUserStore((state) => state.currentUser);
-  const userLoading = useUserStore((state) => state.isLoading.length > 0);
-  const isAuthenticated = useUserStore((state) =>
-    state.isAuthenticated(),
-  );
-  const hydrateViewer = useViewerStore(
-    (state) => state.hydrateForUser,
-  );
-  const viewerLoading = useViewerStore((state) => state.isLoading);
+  const dispatch = useAppDispatch();
+  const hasInitializedAuth = useAppSelector(selectHasInitializedAuth);
+  const { isAuthenticated, currentUser } = useAuthUser();
+  const [loadCurrentUser] = useLazyGetCurrentUserQuery();
 
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    dispatch(markAuthInitialized());
+  }, [dispatch]);
 
   useEffect(() => {
-    if (
-      !hasInitializedAuth ||
-      !isAuthenticated ||
-      currentUser ||
-      userLoading
-    ) {
+    if (isAuthenticated && !currentUser) {
+      loadCurrentUser();
+    }
+  }, [currentUser, isAuthenticated, loadCurrentUser]);
+
+  useEffect(() => {
+    if (!currentUser || !currentUser.patientId) {
       return;
     }
-
-    loadCurrentUser();
-  }, [
-    currentUser,
-    hasInitializedAuth,
-    isAuthenticated,
-    loadCurrentUser,
-    userLoading,
-  ]);
-
-  useEffect(() => {
-    if (!currentUser || !currentUser.patient_id) {
-      return;
-    }
-
-    hydrateViewer(currentUser?.patient_id);
-  }, [currentUser, hydrateViewer]);
+  }, [currentUser, dispatch]);
 
   if (!hasInitializedAuth || (isAuthenticated && !currentUser)) {
-    return <FullScreenLoading visible text="Checking session..." />;
+    return (
+      <FullScreenLoading
+        visible
+        text="Checking session..."
+      />
+    );
   }
 
   if (!isAuthenticated) {
     return <Redirect href={routes.public.signIn} />;
-  }
-
-  if (viewerLoading) {
-    return <FullScreenLoading visible text="Loading your data..." />;
   }
 
   return (

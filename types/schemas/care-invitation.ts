@@ -1,6 +1,4 @@
-import {
-  PermissionLevel,
-} from "../api/care-invitation";
+import { PermissionLevel } from "../../store/care-invitation/type";
 
 export interface ICreateInvitationInput {
   email: string;

@@ -1,20 +1,47 @@
-import { DosageForm, DoseUnit } from "@/types/common";
+import { MedicationFormValues } from "@/store/medication";
+import { Action, DosageForm, DoseUnit } from "@/types/common";
 
 export const MEDICATION_DOSAGE_FORM = {
-  [DosageForm.Capsule]: "膠囊",
-  [DosageForm.Softgel]: "軟膠囊",
-  [DosageForm.Tablet]: "藥片",
-  [DosageForm.Liquid]: "液體",
-  [DosageForm.Powder]: "粉末",
-  [DosageForm.Pill]: "藥丸",
-  [DosageForm.Spray]: "噴霧",
+  [DosageForm.Capsule]: "Capsule",
+  [DosageForm.Softgel]: "Softgel",
+  [DosageForm.Tablet]: "Tablet",
+  [DosageForm.Liquid]: "Liquid",
+  [DosageForm.Powder]: "Powder",
+  [DosageForm.Pill]: "Pill",
+  [DosageForm.Spray]: "Spray",
 };
 
 export const DOSE_UNIT_LABELS = {
-  [DoseUnit.Mg]: "毫克",
-  [DoseUnit.Ml]: "毫升",
-  [DoseUnit.Tablet]: "錠",
-  [DoseUnit.Capsule]: "顆",
-  [DoseUnit.Package]: "包",
-  [DoseUnit.Drop]: "滴",
+  [DoseUnit.Mg]: "mg",
+  [DoseUnit.Ml]: "mL",
+  [DoseUnit.Tablet]: "tablet",
+  [DoseUnit.Capsule]: "capsule",
+  [DoseUnit.Package]: "pack",
+  [DoseUnit.Drop]: "drop",
 } as const;
+
+export const ACTION_TITLE: Record<Action, string> = {
+  [Action.Create]: "Create Medication",
+  [Action.Edit]: "Edit Medication",
+  [Action.Info]: "Medication Detail",
+};
+
+export const ACTION_BUTTON: Record<Action, string> = {
+  [Action.Create]: "Create",
+  [Action.Edit]: "Save",
+  [Action.Info]: "Delete Medication",
+};
+
+export const EMPTY_MEDICATION: MedicationFormValues = {
+  id: "",
+  patientName: "",
+  patientId: "",
+  name: "",
+  dosageForm: DosageForm.Capsule,
+  note: "",
+};
+
+export const CREATE_STEPS = [
+  "Select patient",
+  "Medication details",
+] as const;

@@ -1,19 +1,16 @@
-import { StyleSheet } from "react-native";
-import { ThemedView } from "../themed-view";
-import { ThemedText } from "../themed-text";
-import { ICareRelationship } from "@/types/api/care-relationship";
-import { PermissionLevel, Role } from "@/types/api/care-invitation";
 import { ROLE_LABEL } from "@/constants/care";
+import { PermissionLevel, Role } from "@/store/care-invitation/type";
+import { ICareRelationship } from "@/types/api/care-relationship";
+import { StyleSheet } from "react-native";
+import { ThemedText } from "../themed-text";
+import { ThemedView } from "../themed-view";
 
 interface IProps {
   userRole: Role;
   relationship: ICareRelationship;
 }
 
-const RelationShipCard = ({
-  userRole,
-  relationship,
-}: IProps) => {
+const RelationShipCard = ({ userRole, relationship }: IProps) => {
   return (
     <ThemedView style={styles.patientCard}>
       <ThemedView style={styles.patientHeader}>

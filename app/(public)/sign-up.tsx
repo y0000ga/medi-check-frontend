@@ -1,22 +1,20 @@
-import { Pressable, StyleSheet, View } from "react-native";
 import { useState } from "react";
+import { Pressable, View } from "react-native";
 import { useRouter } from "expo-router";
 
+import { signUpStyles } from "@/components/auth/styles/sign-up.style";
 import FieldInput from "@/components/ui/field-input";
-import { routes } from "@/constants/route";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { ApiRequestError } from "@/libs/api/client";
-import { useUserStore } from "@/stores/user";
+import { routes } from "@/constants/route";
+import { ApiRequestError } from "@/store/api/client";
+import { useAuthFlows } from "@/store/user";
 
 const SignUpScreen = () => {
   const router = useRouter();
-  const register = useUserStore((state) => state.register);
-  const authLoading = useUserStore(
-    (state) => state.isLoading.length > 0,
-  );
-
+  const { signUp: signUpFlow, isSigningUp: authLoading } =
+    useAuthFlows();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -24,52 +22,37 @@ const SignUpScreen = () => {
   const [error, setError] = useState("");
 
   const handleSignUp = async () => {
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !password.trim() ||
-      !confirmPassword.trim()
-    ) {
-      setError("請完整填寫註冊資訊。");
+    if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
+      setError("Please complete all fields.");
       return;
     }
-
     if (password !== confirmPassword) {
-      setError("兩次輸入的密碼不一致。");
+      setError("Passwords do not match.");
       return;
     }
 
     setError("");
     try {
-      await register({ name, email, password });
+      await signUpFlow({ name, email, password });
       router.replace(routes.protected.home);
     } catch (err) {
-      // TODO: 續處理錯誤部分
-      // TODO: 續處理帳號密碼規則
-      console.log(err);
       if (err instanceof ApiRequestError) {
-        console.log("sign-up error:", err.raw);
         setError(err.message);
         return;
       }
-      setError(
-        err instanceof Error ? err.message : "註冊失敗，請稍後再試。",
-      );
+      setError(err instanceof Error ? err.message : "Sign-up failed.");
     }
   };
 
   return (
     <>
       <FullScreenLoading visible={authLoading} />
-      <ThemedView style={styles.screen}>
-        <View style={styles.content}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <ThemedText
-                type="subtitle"
-                style={styles.cardTitle}
-              >
-                建立帳號
+      <ThemedView style={signUpStyles.screen}>
+        <View style={signUpStyles.content}>
+          <View style={signUpStyles.card}>
+            <View style={signUpStyles.cardHeader}>
+              <ThemedText type="subtitle" style={signUpStyles.cardTitle}>
+                Create account
               </ThemedText>
             </View>
 
@@ -77,11 +60,10 @@ const SignUpScreen = () => {
               label="Name"
               value={name}
               onChangeText={setName}
-              placeholder="輸入名稱"
+              placeholder="Enter name"
               autoCapitalize="words"
               autoCorrect={false}
             />
-
             <FieldInput
               label="Email"
               value={email}
@@ -91,52 +73,48 @@ const SignUpScreen = () => {
               autoCapitalize="none"
               autoCorrect={false}
             />
-
             <FieldInput
               label="Password"
               value={password}
               onChangeText={setPassword}
-              placeholder="設定密碼"
+              placeholder="Enter password"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
-
             <FieldInput
               label="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="再次輸入密碼"
+              placeholder="Confirm password"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
 
             {error ? (
-              <ThemedText style={styles.errorText}>
-                {error}
-              </ThemedText>
+              <ThemedText style={signUpStyles.errorText}>{error}</ThemedText>
             ) : null}
 
             <Pressable
               style={[
-                styles.primaryButton,
-                authLoading && styles.buttonDisabled,
+                signUpStyles.primaryButton,
+                authLoading && signUpStyles.buttonDisabled,
               ]}
               onPress={handleSignUp}
               disabled={authLoading}
             >
-              <ThemedText style={styles.primaryButtonText}>
-                註冊
+              <ThemedText style={signUpStyles.primaryButtonText}>
+                Sign up
               </ThemedText>
             </Pressable>
 
             <Pressable
-              style={styles.bottomAction}
+              style={signUpStyles.bottomAction}
               onPress={() => router.push(routes.public.signIn)}
             >
-              <ThemedText style={styles.bottomActionText}>
-                已經有帳號？返回登入
+              <ThemedText style={signUpStyles.bottomActionText}>
+                Already have an account? Sign in
               </ThemedText>
             </Pressable>
           </View>
@@ -147,62 +125,3 @@ const SignUpScreen = () => {
 };
 
 export default SignUpScreen;
-
-const styles = StyleSheet.create({
-  screen: {
-    width: "100%",
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
-    justifyContent: "center",
-    gap: 16,
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 20,
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  cardHeader: {
-    gap: 4,
-  },
-  cardTitle: {
-    color: "#0F172A",
-  },
-  errorText: {
-    color: "#DC2626",
-    lineHeight: 20,
-  },
-  primaryButton: {
-    backgroundColor: "#3C83F6",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: "white",
-    fontWeight: "700",
-  },
-  bottomAction: {
-    alignSelf: "center",
-    marginTop: 4,
-  },
-  bottomActionText: {
-    color: "#3C83F6",
-    fontWeight: "600",
-  },
-});

@@ -1,4 +1,4 @@
-import { InvationStatus } from "@/types/api/care-invitation";
+import { InvationStatus } from "@/store/care-invitation/type";
 
 export const INVITATION_STATUS_LABEL: Record<InvationStatus, string> =
   {

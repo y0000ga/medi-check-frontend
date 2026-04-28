@@ -8,7 +8,7 @@ import {
   PERMISSION_OPTIONS,
   STATUS_LABEL,
 } from "@/constants/care";
-import { CareTeamMember } from "@/libs/api/patient";
+import { CareTeamMember } from "@/store/patient/api";
 
 interface IProps {
   caregiver: CareTeamMember;

@@ -1,63 +1,54 @@
-import { Pressable, StyleSheet, View } from "react-native";
 import { useState } from "react";
+import { Pressable, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { resetPasswordStyles } from "@/components/auth/styles/reset-password.style";
 import FieldInput from "@/components/ui/field-input";
-import { routes } from "@/constants/route";
 import FullScreenLoading from "@/components/ui/fullscreen-loading";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { useUserStore } from "@/stores/user";
+import { routes } from "@/constants/route";
+import { useResetPasswordMutation } from "@/store/user";
 
 const ResetPasswordScreen = () => {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const email = typeof params.email === "string" ? params.email : "";
-  const confirmPasswordReset = useUserStore(
-    (state) => state.confirmPasswordReset,
-  );
-  const authLoading = useUserStore(
-    (state) => state.isLoading.length > 0,
-  );
-
+  const [confirmPasswordReset, { isLoading: authLoading }] =
+    useResetPasswordMutation();
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
   const handleReset = async () => {
     if (!password.trim() || !confirmPassword.trim()) {
-      setError("請輸入新密碼並再次確認。");
+      setError("Please enter and confirm your new password.");
       return;
     }
 
     setError("");
     try {
-      await confirmPasswordReset({ password, confirmPassword });
+      await confirmPasswordReset({ password, confirmPassword }).unwrap();
       router.push(routes.public.signIn);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "重設失敗，請稍後再試。",
-      );
+      setError(err instanceof Error ? err.message : "Reset failed.");
     }
   };
 
   return (
     <>
       <FullScreenLoading visible={authLoading} />
-      <ThemedView style={styles.screen}>
-        <View style={styles.content}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <ThemedText
-                type="subtitle"
-                style={styles.cardTitle}
-              >
-                重設密碼
+      <ThemedView style={resetPasswordStyles.screen}>
+        <View style={resetPasswordStyles.content}>
+          <View style={resetPasswordStyles.card}>
+            <View style={resetPasswordStyles.cardHeader}>
+              <ThemedText type="subtitle" style={resetPasswordStyles.cardTitle}>
+                Reset password
               </ThemedText>
-              <ThemedText style={styles.cardDescription}>
+              <ThemedText style={resetPasswordStyles.cardDescription}>
                 {email
-                  ? `正在重設 ${email} 的密碼。`
-                  : "設定新的登入密碼。"}
+                  ? `Resetting password for ${email}`
+                  : "Enter a new password to continue."}
               </ThemedText>
             </View>
 
@@ -65,7 +56,7 @@ const ResetPasswordScreen = () => {
               label="New Password"
               value={password}
               onChangeText={setPassword}
-              placeholder="輸入新密碼"
+              placeholder="Enter new password"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -75,37 +66,37 @@ const ResetPasswordScreen = () => {
               label="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="再次輸入新密碼"
+              placeholder="Confirm new password"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
 
             {error ? (
-              <ThemedText style={styles.errorText}>
+              <ThemedText style={resetPasswordStyles.errorText}>
                 {error}
               </ThemedText>
             ) : null}
 
             <Pressable
               style={[
-                styles.primaryButton,
-                authLoading && styles.buttonDisabled,
+                resetPasswordStyles.primaryButton,
+                authLoading && resetPasswordStyles.buttonDisabled,
               ]}
               onPress={handleReset}
               disabled={authLoading}
             >
-              <ThemedText style={styles.primaryButtonText}>
-                完成重設
+              <ThemedText style={resetPasswordStyles.primaryButtonText}>
+                Reset password
               </ThemedText>
             </Pressable>
 
             <Pressable
-              style={styles.bottomAction}
+              style={resetPasswordStyles.bottomAction}
               onPress={() => router.back()}
             >
-              <ThemedText style={styles.bottomActionText}>
-                取消
+              <ThemedText style={resetPasswordStyles.bottomActionText}>
+                Back
               </ThemedText>
             </Pressable>
           </View>
@@ -116,66 +107,3 @@ const ResetPasswordScreen = () => {
 };
 
 export default ResetPasswordScreen;
-
-const styles = StyleSheet.create({
-  screen: {
-    width: "100%",
-    flex: 1,
-    backgroundColor: "#F8FAFC",
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
-    paddingBottom: 24,
-    justifyContent: "center",
-    gap: 16,
-  },
-  card: {
-    backgroundColor: "white",
-    borderRadius: 12,
-    padding: 20,
-    gap: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 1,
-  },
-  cardHeader: {
-    gap: 6,
-  },
-  cardTitle: {
-    color: "#0F172A",
-  },
-  cardDescription: {
-    color: "#64748B",
-    lineHeight: 22,
-  },
-  errorText: {
-    color: "#DC2626",
-    lineHeight: 20,
-  },
-  primaryButton: {
-    backgroundColor: "#3C83F6",
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: "white",
-    fontWeight: "700",
-  },
-  bottomAction: {
-    alignSelf: "center",
-    marginTop: 4,
-  },
-  bottomActionText: {
-    color: "#3C83F6",
-    fontWeight: "600",
-  },
-});

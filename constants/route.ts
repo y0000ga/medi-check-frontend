@@ -19,7 +19,6 @@ export const routes = {
     medication: "/medication" as Href,
     me: "/me" as Href,
     modal: {
-      viewer: "/me/viewer" as Href,
       profile: "/me/profile" as Href,
       security: "/me/security" as Href,
       careNetwork: "/me/care-network" as Href,

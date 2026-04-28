@@ -2,9 +2,13 @@ import dayjs from "dayjs";
 import { useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { IScheduleEvent } from "@/store/schedule/type";
 import { evaluateLabel, evaluteStatus } from "@/utils/common";
 import { IconSymbol } from "./ui/icon-symbol";
-import { IScheduleEvent } from "@/types/api/schedule";
+
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
 
 interface IProps {
   toggleCheck: () => void;
@@ -33,7 +37,7 @@ const EventCard = ({
   },
 }: IProps) => {
   const { isOperable, isIntaken, isMissed } = evaluteStatus({
-    scheduledTime:scheduled_at,
+    scheduledTime: scheduled_at,
     intakenTime: history?.intake_at,
   });
 
@@ -65,8 +69,11 @@ const EventCard = ({
   }, [isIntaken, isMissed]);
 
   return (
-    <View style={[styles.card, !isOperable && styles.disabled]}>
-      <Pressable onPress={toggleCheck}>
+    <View style={[styles.card]}>
+      <Pressable
+        onPress={toggleCheck}
+        style={[!isOperable && styles.disabled]}
+      >
         <View style={styles.header}>
           <View
             style={[
@@ -136,7 +143,10 @@ const EventCard = ({
             <Text style={styles.detailLabel}>紀錄時間</Text>
             <Text style={styles.detailValue}>
               {history?.intake_at
-                ? dayjs(history?.intake_at).format("YYYY/MM/DD HH:mm")
+                ? dayjs
+                    .utc(history?.intake_at)
+                    .local()
+                    .format("YYYY/MM/DD HH:mm")
                 : "尚未紀錄"}
             </Text>
           </View>
